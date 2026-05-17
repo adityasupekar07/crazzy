@@ -1,0 +1,9 @@
+{"environment":"development","level":"info","message":"Server running in undefined mode on port 5000","service":"dairy-backend","timestamp":"2026-05-15 16:30:18"}
+{"environment":"development","level":"info","message":"Server running in undefined mode on port 5000","service":"dairy-backend","timestamp":"2026-05-15 16:30:31"}
+{"environment":"development","level":"info","message":"Server running in undefined mode on port 5000","service":"dairy-backend","timestamp":"2026-05-15 16:31:18"}
+{"environment":"development","level":"info","message":"Server running in undefined mode on port 5000","service":"dairy-backend","timestamp":"2026-05-15 16:31:59"}
+{"environment":"development","level":"info","message":"Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-15 16:33:29"}
+{"environment":"development","level":"info","message":"Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-15 23:24:26"}
+{"environment":"development","level":"info","message":"Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-15 23:24:31"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-15 23:40:12"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-15 23:40:12"}

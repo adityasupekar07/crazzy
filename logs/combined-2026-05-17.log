@@ -1,0 +1,31 @@
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:30:20"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:30:20"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:34:14"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:34:14"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:34:21"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:34:21"}
+{"code":"VALIDATION_ERROR","environment":"development","ip":"::1","level":"error","message":"Validation failed","method":"POST","service":"dairy-backend","stack":"Error: Validation failed\n    at formatZodError (/Users/adityasupekar/Desktop/dairy/src/middleware/validate.middleware.ts:103:12)\n    at <anonymous> (/Users/adityasupekar/Desktop/dairy/src/middleware/validate.middleware.ts:33:27)","statusCode":400,"timestamp":"2026-05-17 18:38:01","url":"/api/v1/customer/create-new","userAgent":"PostmanRuntime/7.53.0"}
+{"code":"VALIDATION_ERROR","environment":"development","ip":"::1","level":"error","message":"Validation failed","method":"POST","service":"dairy-backend","stack":"Error: Validation failed\n    at formatZodError (/Users/adityasupekar/Desktop/dairy/src/middleware/validate.middleware.ts:103:12)\n    at <anonymous> (/Users/adityasupekar/Desktop/dairy/src/middleware/validate.middleware.ts:33:27)","statusCode":400,"timestamp":"2026-05-17 18:38:13","url":"/api/v1/customer/create-new","userAgent":"PostmanRuntime/7.53.0"}
+{"code":"VALIDATION_ERROR","environment":"development","ip":"::1","level":"error","message":"Validation failed","method":"POST","service":"dairy-backend","stack":"Error: Validation failed\n    at formatZodError (/Users/adityasupekar/Desktop/dairy/src/middleware/validate.middleware.ts:103:12)\n    at <anonymous> (/Users/adityasupekar/Desktop/dairy/src/middleware/validate.middleware.ts:33:27)","statusCode":400,"timestamp":"2026-05-17 18:38:23","url":"/api/v1/customer/create-new","userAgent":"PostmanRuntime/7.53.0"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:42:12"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:42:12"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:52:58"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:52:58"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:53:00"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:53:00"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:53:01"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:53:01"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:53:02"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:53:02"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:53:04"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:53:04"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:53:23"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:53:23"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:53:25"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:53:25"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:53:26"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:53:26"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 18:53:28"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 18:53:28"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-17 19:00:46"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-17 19:00:46"}

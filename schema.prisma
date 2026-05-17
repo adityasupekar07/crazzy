@@ -1,0 +1,309 @@
+// // ─────────────────────────────────────────────────────────────
+// //  Dairy Management App — Prisma Schema
+// //  DB: PostgreSQL
+// // ─────────────────────────────────────────────────────────────
+
+// generator client {
+//   provider = "prisma-client-js"
+// }
+
+// datasource db {
+//   provider = "postgresql"
+//   url      = env("DATABASE_URL")
+// }
+
+// // ═══════════════════════════════════════════════════════════════
+// //  ENUMS
+// // ═══════════════════════════════════════════════════════════════
+
+// enum CollectionType {
+//   FIXED_RATE    // flat price per litre
+//   FAT_BASED     // price depends on fat %
+//   FAT_SNF_BASED // price depends on fat % + SNF %
+// }
+
+// enum MilkType {
+//   COW
+//   BUFFALO
+//   MIX
+// }
+
+// enum CollectionShift {
+//   MORNING
+//   EVENING
+//   BOTH
+// }
+
+// enum PaymentPeriod {
+//   DAILY
+//   WEEKLY
+//   BIWEEKLY
+//   MONTHLY
+// }
+
+// enum PaymentStatus {
+//   PENDING
+//   PAID
+//   PARTIAL
+// }
+
+// enum TransactionType {
+//   CREDIT // payment to customer
+//   DEBIT  // advance recovered
+// }
+
+// // ═══════════════════════════════════════════════════════════════
+// //  ADMIN  (Dairy Owner)
+// // ═══════════════════════════════════════════════════════════════
+
+// model Admin {
+//   id              String          @id @default(cuid())
+
+//   // Personal info
+//   ownerName       String
+//   mobile          String          @unique
+//   password        String          // bcrypt hashed
+
+//   // Dairy info
+//   dairyName       String
+//   village         String
+//   taluka          String
+//   district        String
+//   state           String
+
+//   // Business settings
+//   collectionType  CollectionType
+//   milkType        MilkType
+//   collectionShift CollectionShift
+//   paymentPeriod   PaymentPeriod
+
+//   // Optional settings
+//   logoUrl         String?
+//   address         String?
+//   gstin           String?
+
+//   // refresh token for JWT rotation
+//   refreshToken    String?
+
+//   createdAt       DateTime        @default(now())
+//   updatedAt       DateTime        @updatedAt
+
+//   // Relations
+//   customers       Customer[]
+//   rateCharts      RateChart[]
+//   collections     MilkCollection[]
+//   payments        Payment[]
+//   announcements   Announcement[]
+
+//   @@map("admins")
+// }
+
+// // ═══════════════════════════════════════════════════════════════
+// //  CUSTOMER  (Farmer / Supplier)
+// // ═══════════════════════════════════════════════════════════════
+
+// model Customer {
+//   id          String    @id @default(cuid())
+
+//   // Auto-incremented per dairy (not global)
+//   code        Int
+
+//   name        String
+//   mobile      String
+//   address     String?
+//   milkType    MilkType
+
+//   // Bank details for payment
+//   bankName    String?
+//   accountNo   String?
+//   ifscCode    String?
+
+//   // Advance / loan balance (in ₹)
+//   advanceBalance Decimal @default(0) @db.Decimal(10, 2)
+
+//   isActive    Boolean   @default(true)
+
+//   adminId     String
+//   admin       Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+//   createdAt   DateTime  @default(now())
+//   updatedAt   DateTime  @updatedAt
+
+//   // Relations
+//   collections MilkCollection[]
+//   payments    Payment[]
+//   transactions CustomerTransaction[]
+
+//   // Composite unique: code is unique per dairy, not globally
+//   @@unique([adminId, code])
+//   // Mobile unique per dairy
+//   @@unique([adminId, mobile])
+
+//   @@map("customers")
+// }
+
+// // ═══════════════════════════════════════════════════════════════
+// //  RATE CHART  (Price slabs for fat/SNF based pricing)
+// // ═══════════════════════════════════════════════════════════════
+
+// model RateChart {
+//   id            String    @id @default(cuid())
+
+//   name          String    // e.g. "Summer 2024 Cow Rates"
+//   milkType      MilkType
+//   collectionType CollectionType
+//   isActive      Boolean   @default(true)
+
+//   adminId       String
+//   admin         Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+//   createdAt     DateTime  @default(now())
+//   updatedAt     DateTime  @updatedAt
+
+//   // Relations
+//   slabs         RateSlab[]
+//   collections   MilkCollection[]
+
+//   @@map("rate_charts")
+// }
+
+// // ─── Rate Slab (one row per fat % range) ─────────────────────
+// // e.g. fat 3.0–3.4 → ₹28.00/litre
+// //      fat 3.5–3.9 → ₹30.00/litre
+
+// model RateSlab {
+//   id          String    @id @default(cuid())
+
+//   fatMin      Decimal   @db.Decimal(4, 1)  // e.g. 3.0
+//   fatMax      Decimal   @db.Decimal(4, 1)  // e.g. 3.4
+//   snfMin      Decimal?  @db.Decimal(4, 1)  // only for FAT_SNF_BASED
+//   snfMax      Decimal?  @db.Decimal(4, 1)
+//   ratePerLitre Decimal  @db.Decimal(8, 2)  // ₹ per litre
+
+//   rateChartId String
+//   rateChart   RateChart @relation(fields: [rateChartId], references: [id], onDelete: Cascade)
+
+//   @@map("rate_slabs")
+// }
+
+// // ═══════════════════════════════════════════════════════════════
+// //  MILK COLLECTION  (Daily entry per customer per shift)
+// // ═══════════════════════════════════════════════════════════════
+
+// model MilkCollection {
+//   id            String          @id @default(cuid())
+
+//   date          DateTime        @db.Date
+//   shift         CollectionShift // MORNING | EVENING
+
+//   // Measurements
+//   quantity      Decimal         @db.Decimal(8, 2)   // litres
+//   fat           Decimal?        @db.Decimal(4, 1)   // fat %,  e.g. 4.5
+//   snf           Decimal?        @db.Decimal(4, 1)   // SNF %,  e.g. 8.2
+//   clr           Decimal?        @db.Decimal(4, 1)   // CLR (optional)
+
+//   // Calculated & stored for history
+//   ratePerLitre  Decimal         @db.Decimal(8, 2)
+//   totalAmount   Decimal         @db.Decimal(10, 2)
+
+//   // Which rate chart was used
+//   rateChartId   String?
+//   rateChart     RateChart?      @relation(fields: [rateChartId], references: [id])
+
+//   customerId    String
+//   customer      Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+//   adminId       String
+//   admin         Admin           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+//   createdAt     DateTime        @default(now())
+//   updatedAt     DateTime        @updatedAt
+
+//   // One entry per customer per date per shift
+//   @@unique([customerId, date, shift])
+
+//   // Fast queries: all collections for a dairy on a date
+//   @@index([adminId, date])
+//   @@index([customerId, date])
+
+//   @@map("milk_collections")
+// }
+
+// // ═══════════════════════════════════════════════════════════════
+// //  PAYMENT  (Periodic settlement to customer)
+// // ═══════════════════════════════════════════════════════════════
+
+// model Payment {
+//   id              String        @id @default(cuid())
+
+//   periodStart     DateTime      @db.Date
+//   periodEnd       DateTime      @db.Date
+
+//   // Gross amount from milk collection in this period
+//   grossAmount     Decimal       @db.Decimal(10, 2)
+//   // Advance deducted
+//   advanceDeducted Decimal       @default(0) @db.Decimal(10, 2)
+//   // Net payable
+//   netAmount       Decimal       @db.Decimal(10, 2)
+
+//   status          PaymentStatus @default(PENDING)
+//   paidAt          DateTime?
+
+//   remarks         String?
+
+//   customerId      String
+//   customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+//   adminId         String
+//   admin           Admin         @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+//   createdAt       DateTime      @default(now())
+//   updatedAt       DateTime      @updatedAt
+
+//   @@index([adminId, status])
+//   @@index([customerId, periodStart])
+
+//   @@map("payments")
+// }
+
+// // ═══════════════════════════════════════════════════════════════
+// //  CUSTOMER TRANSACTION  (Advance given / recovered)
+// // ═══════════════════════════════════════════════════════════════
+
+// model CustomerTransaction {
+//   id          String          @id @default(cuid())
+
+//   type        TransactionType // CREDIT = paid to customer, DEBIT = advance recovered
+//   amount      Decimal         @db.Decimal(10, 2)
+//   description String?
+//   date        DateTime        @db.Date @default(now())
+
+//   customerId  String
+//   customer    Customer        @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+//   createdAt   DateTime        @default(now())
+
+//   @@index([customerId, date])
+
+//   @@map("customer_transactions")
+// }
+
+// // ═══════════════════════════════════════════════════════════════
+// //  ANNOUNCEMENT  (Admin broadcasts to customers)
+// // ═══════════════════════════════════════════════════════════════
+
+// model Announcement {
+//   id        String    @id @default(cuid())
+
+//   title     String
+//   body      String
+//   isActive  Boolean   @default(true)
+
+//   adminId   String
+//   admin     Admin     @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+//   createdAt DateTime  @default(now())
+//   updatedAt DateTime  @updatedAt
+
+//   @@map("announcements")
+// }

@@ -1,0 +1,185 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/**
+ * ADMIN MODEL
+ */
+
+model Admin {
+  id String @id @default(cuid())
+
+  /**
+   * AUTH INFO
+   */
+
+  ownerName String
+
+  mobile String @unique
+
+  password String
+
+  /**
+   * DAIRY INFO
+   */
+
+  dairyName String
+
+  village String
+
+  taluka String
+
+  district String
+
+  state String
+
+  /**
+   * DAIRY SETTINGS
+   */
+
+  collectionType CollectionType
+
+  milkType MilkType
+
+  collectionShift CollectionShift
+
+  paymentPeriod PaymentPeriod
+
+  /**
+   * RELATIONS
+   */
+
+  customers Customer[]
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * CUSTOMER MODEL
+ */
+
+model Customer {
+  id String @id @default(cuid())
+
+  /**
+   * CUSTOMER INFO
+   */
+
+  code Int
+
+  name String
+
+  mobile String
+
+  address String?
+
+  milkType MilkType
+
+  /**
+   * RELATION
+   */
+
+  adminId String
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  milkEntries MilkEntry[]
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  /**
+   * UNIQUE CONSTRAINTS
+   */
+
+  @@unique([adminId, code])
+  @@unique([adminId, mobile])
+}
+
+/**
+ * ENUMS
+ */
+
+enum CollectionType {
+  FIXED_RATE
+  FAT_BASED
+  FAT_SNF_BASED
+}
+
+enum MilkType {
+  COW
+  BUFFALO
+  MIX
+}
+
+enum CollectionShift {
+  MORNING
+  EVENING
+  BOTH
+}
+
+enum PaymentPeriod {
+  DAILY
+  WEEKLY
+  BIWEEKLY
+  MONTHLY
+}
+
+model MilkEntry {
+  id String @id @default(cuid())
+
+  /**
+   * ENTRY INFO
+   */
+
+  date DateTime
+
+  shift CollectionShift
+
+  milkType MilkType
+
+  quantity Float
+
+  fat Float?
+
+  snf Float?
+
+  rate Float?
+
+  totalAmount Float?
+
+  /**
+   * CUSTOMER RELATION
+   */
+
+  customerId String
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([date])
+  @@index([customerId, date])
+}
