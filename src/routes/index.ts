@@ -3,6 +3,7 @@ import { Router } from "express";
 import authRoutes from "../modules/auth/auth.routes.js";
 import adminRoutes from "../modules/Admin/admin.routes.js";
 import customerRoutes from "../modules/customer/customer.route.js";
+import milkEntryRoutes from "../modules/milkEntry/milkEntry.route.js";
 const router = Router();
 
 /**
@@ -23,6 +24,10 @@ router.use(
 router.use(
     "/customer",
     customerRoutes
+);
+router.use(
+    "/milk",
+    milkEntryRoutes
 );
 
 export default router;

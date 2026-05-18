@@ -1,3 +1,4 @@
+import { number } from "zod";
 import { prisma }
 from "../../config/prisma.js";
 
@@ -10,17 +11,28 @@ from "../../utils/ApiError.js";
  * =====================================================
  */
 
+
+
 export const addMilkEntry =
-    async (data: any) => {
+    async (
+        adminId: string,
+
+        data: any
+    ) => {
 
         /**
-         * CHECK CUSTOMER EXISTS
+         * FIND CUSTOMER
+         * USING:
+         * adminId + customerCode
          */
 
         const customer =
-            await prisma.customer.findUnique({
+            await prisma.customer.findFirst({
                 where: {
-                    code: data.customerCode,
+                    adminId,
+
+                    code:
+                    Number   ( data.customerCode),
                 },
             });
 
@@ -30,7 +42,7 @@ export const addMilkEntry =
                 "Customer not found"
             );
         }
-        
+
         /**
          * CREATE ENTRY
          */
@@ -38,7 +50,7 @@ export const addMilkEntry =
         return prisma.milkEntry.create({
             data: {
                 customerId:
-                    data.customerId,
+                    customer.id,
 
                 date:
                     new Date(
@@ -68,7 +80,6 @@ export const addMilkEntry =
             },
         });
     };
-
 /**
  * =====================================================
  * GET CUSTOMER ENTRIES

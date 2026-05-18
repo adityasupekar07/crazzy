@@ -19,6 +19,7 @@ export const addMilkEntry =
 
             const result =
                 await milkEntryService.addMilkEntry(
+                    req.user.id,
                     req.body
                 );
 

@@ -9,7 +9,7 @@ from "zod";
 
 export const addMilkEntrySchema =
     z.object({
-        customerId:
+        customerCode:
             z.string(),
 
         date:

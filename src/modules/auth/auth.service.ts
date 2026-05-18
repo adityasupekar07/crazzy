@@ -42,8 +42,8 @@ export const verifyPhone =
         // const mobile =
         //     decodedToken.phone_number;
 const mobile =
-    "+919999999999";
-    
+    "+919999999998";
+
         if (!mobile) {
             throw new ApiError(
                 400,

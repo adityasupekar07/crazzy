@@ -9,6 +9,7 @@ const globalErrorHandler = (
     res: Response,
     next: NextFunction
 ): Response => {
+  
     let error = err;
 
     /**
