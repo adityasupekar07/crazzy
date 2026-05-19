@@ -9,7 +9,7 @@ import logger from "./config/logger.js";
 import { prisma } from "./config/prisma.js";
 
 const PORT =
-    process.env.PORT || 5000;
+    Number(process.env.PORT) || 5000;
 
 /**
  * =====================================================
@@ -30,7 +30,7 @@ const startServer = async () => {
         );
 
         const server = app.listen(
-            PORT,
+            PORT,"0.0.0.0",
             () => {
                 logger.info(
                     `🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`

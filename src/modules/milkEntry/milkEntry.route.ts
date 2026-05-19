@@ -13,6 +13,7 @@ import {
     getMilkEntryById,
     updateMilkEntry,
     deleteMilkEntry,
+    getTodayMilkEntries,
 } from "./milkEntry.controller.js";
 
 import {
@@ -40,6 +41,15 @@ router.post(
 
     addMilkEntry
 );
+
+router.get(
+    "/today",
+
+    authMiddleware,
+
+    getTodayMilkEntries
+);
+
 
 /**
  * =====================================================
@@ -101,5 +111,7 @@ router.delete(
 
     deleteMilkEntry
 );
+
+
 
 export default router;

@@ -96,6 +96,8 @@ model Customer {
   admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   milkEntries MilkEntry[]
+  
+  foodEntries FoodEntry[]
 
   /**
    * TIMESTAMPS
@@ -184,4 +186,60 @@ model MilkEntry {
   @@index([customerId])
   @@index([date])
   @@index([customerId, date])
+}
+
+
+model FoodEntry {
+  id String @id @default(cuid())
+
+  /**
+   * FOOD ENTRY INFO
+   */
+
+  date DateTime
+
+  itemName String
+
+  quantity Float
+
+  amount Float
+
+  totalAmount Float
+
+  receiptNo String?
+
+  paymentMode PaymentMode
+
+  notes String?
+
+  /**
+   * CUSTOMER RELATION
+   */
+
+  customerId String
+
+  customer Customer @relation(fields: [customerId], references: [id],  onDelete: Cascade )
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  /**
+   * INDEXES
+   */
+
+  @@index([customerId])
+  @@index([date])
+  @@index([customerId, date])
+}
+enum PaymentMode {
+  CASH
+  ONLINE
+  UPI
+  BANK_TRANSFER
+  CREDIT
 }

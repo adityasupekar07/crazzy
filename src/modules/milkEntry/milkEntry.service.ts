@@ -229,3 +229,70 @@ export const deleteMilkEntry =
 
         return null;
     };
+     /**
+ * =====================================================
+ * GET TODAY ENTRIES
+ * =====================================================
+ */
+
+export const getTodayMilkEntries =
+    async (
+        adminId: string,
+        shift?: "MORNING" | "EVENING" | "BOTH"
+    ) => {
+
+        const startOfDay =
+            new Date();
+
+        startOfDay.setHours(
+            0,
+            0,
+            0,
+            0
+        );
+
+        const endOfDay =
+            new Date();
+
+        endOfDay.setHours(
+            23,
+            59,
+            59,
+            999
+        );
+
+        const entries =
+            await prisma.milkEntry.findMany({
+
+                where: {
+
+                    customer: {
+                        adminId,
+                    },
+
+                    ...(shift && {
+                        shift,
+                    }),
+
+                    date: {
+                        gte:
+                            startOfDay,
+
+                        lte:
+                            endOfDay,
+                    },
+                },
+
+                include: {
+                    customer: true,
+                },
+
+                orderBy: {
+                    createdAt:
+                        "desc",
+                },
+            });
+            console.log(entries);
+
+        return entries;
+    };

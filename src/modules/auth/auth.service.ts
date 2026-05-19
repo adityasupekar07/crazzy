@@ -28,21 +28,21 @@ export const verifyPhone =
          * VERIFY FIREBASE TOKEN
          */
 
-        // const decodedToken =
-        //     await admin
-        //         .auth()
-        //         .verifyIdToken(
-        //             firebaseToken
-        //         );
+        const decodedToken =
+            await admin
+                .auth()
+                .verifyIdToken(
+                    firebaseToken
+                );
 
         // /**
         //  * EXTRACT MOBILE
         //  */
 
-        // const mobile =
-        //     decodedToken.phone_number;
-const mobile =
-    "+919999999998";
+        const mobile =
+            decodedToken.phone_number;
+// const mobile =
+//     "+919999999998";
 
         if (!mobile) {
             throw new ApiError(

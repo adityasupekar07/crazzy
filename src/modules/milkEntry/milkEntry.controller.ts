@@ -156,3 +156,36 @@ export const deleteMilkEntry =
             );
         }
     );
+     /**
+ * =====================================================
+ * GET TODAY ENTRIES
+ * =====================================================
+ */
+
+export const getTodayMilkEntries =
+    asyncHandler(
+        async (req, res) => {
+
+            const shift =
+                req.query.shift as
+                    | "MORNING"
+                    | "EVENING"
+                    | "BOTH"
+                    | undefined;
+console.log(shift);
+console.log(req.user.id);
+            const result =
+                await milkEntryService.getTodayMilkEntries(
+                    req.user.id,
+                    shift
+                );
+
+            return res.status(200).json(
+                new ApiResponse(
+                    200,
+                    "Today's milk entries fetched successfully",
+                    result
+                )
+            );
+        }
+    );

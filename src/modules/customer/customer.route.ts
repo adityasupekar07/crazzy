@@ -44,7 +44,7 @@ router.post(
  */
 
 router.get(
-    "/",
+    "/all-customers",
 
     authMiddleware,
 
