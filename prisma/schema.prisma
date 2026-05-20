@@ -56,7 +56,7 @@ model Admin {
    */
 
   customers Customer[]
-
+rateCharts RateChart[]
   /**
    * TIMESTAMPS
    */
@@ -96,7 +96,7 @@ model Customer {
   admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   milkEntries MilkEntry[]
-  
+
   foodEntries FoodEntry[]
 
   /**
@@ -188,7 +188,6 @@ model MilkEntry {
   @@index([customerId, date])
 }
 
-
 model FoodEntry {
   id String @id @default(cuid())
 
@@ -218,7 +217,7 @@ model FoodEntry {
 
   customerId String
 
-  customer Customer @relation(fields: [customerId], references: [id],  onDelete: Cascade )
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
   /**
    * TIMESTAMPS
@@ -236,10 +235,172 @@ model FoodEntry {
   @@index([date])
   @@index([customerId, date])
 }
+
 enum PaymentMode {
   CASH
   ONLINE
   UPI
   BANK_TRANSFER
   CREDIT
+}
+
+enum RateChartType {
+  FIXED
+  FAT
+  FAT_SNF
+  FAT_SNF_STEP
+  FAT_SNF_PER_KG
+  MATRIX
+}
+model RateChart {
+  id String @id @default(cuid())
+
+  /**
+   * BASIC INFO
+   */
+
+  name String
+
+  type RateChartType
+
+  milkType MilkType
+
+  shift CollectionShift
+
+  isDefault Boolean @default(false)
+
+  isActive Boolean @default(true)
+
+  /**
+   * OWNER
+   */
+
+  adminId String
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  /**
+   * RELATIONS
+   */
+
+  rule RateRule?
+
+  matrixRates RateMatrix[]
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId])
+
+  @@index([milkType])
+
+  @@index([shift])
+}
+
+
+
+model RateRule {
+  id String @id @default(cuid())
+
+  /**
+   * RELATION
+   */
+
+  rateChartId String @unique
+
+  rateChart RateChart @relation(fields: [rateChartId], references: [id], onDelete: Cascade)
+
+  /**
+   * =========================================
+   * FIXED RATE
+   * =========================================
+   */
+
+  fixedRate Float?
+
+  /**
+   * =========================================
+   * STEP SYSTEM
+   * =========================================
+   */
+
+  baseFat Float?
+
+  baseSnf Float?
+
+  baseRate Float?
+
+  fatStep Float?
+
+  fatRateIncrement Float?
+
+  snfStep Float?
+
+  snfRateIncrement Float?
+
+  /**
+   * =========================================
+   * PER KG SYSTEM
+   * =========================================
+   */
+
+  fatRatePerKg Float?
+
+  snfRatePerKg Float?
+
+  /**
+   * =========================================
+   * RANGE
+   * =========================================
+   */
+
+  minFat Float?
+
+  maxFat Float?
+
+  minSnf Float?
+
+  maxSnf Float?
+
+  /**
+   * =========================================
+   * EXTRA CONFIG
+   * =========================================
+   */
+
+  config Json?
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+}
+model RateMatrix {
+  id String @id @default(cuid())
+
+  rateChartId String
+
+  rateChart RateChart @relation(fields: [rateChartId], references: [id], onDelete: Cascade)
+
+  fat Float?
+
+  snf Float?
+
+  rate Float
+
+  createdAt DateTime @default(now())
+
+  @@index([rateChartId])
+
+  @@index([fat, snf])
+
+  @@unique([rateChartId, fat, snf])
 }

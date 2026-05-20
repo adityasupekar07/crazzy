@@ -38,3 +38,6 @@
 {"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-20 22:26:46"}
 {"environment":"development","level":"warn","message":"🛑 SIGINT received","service":"dairy-backend","timestamp":"2026-05-20 23:25:20"}
 {"environment":"development","level":"info","message":"Redis disconnected","service":"dairy-backend","timestamp":"2026-05-20 23:25:20"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-20 23:32:33"}
+{"environment":"development","level":"info","message":"✅ Redis connected","service":"dairy-backend","timestamp":"2026-05-20 23:32:33"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-20 23:32:33"}
