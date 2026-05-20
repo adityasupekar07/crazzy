@@ -8,6 +8,11 @@ import logger from "./config/logger.js";
 
 import { prisma } from "./config/prisma.js";
 
+import {
+    connectRedis,
+    disconnectRedis,
+} from "./config/redis.js";
+
 const PORT =
     Number(process.env.PORT) || 5000;
 
@@ -28,6 +33,8 @@ const startServer = async () => {
         logger.info(
             "✅ PostgreSQL connected"
         );
+
+        await connectRedis();
 
         const server = app.listen(
             PORT,"0.0.0.0",
@@ -53,6 +60,7 @@ const startServer = async () => {
 
             server.close(async () => {
                 await prisma.$disconnect();
+                await disconnectRedis();
 
                 logger.info(
                     "✅ Server closed"

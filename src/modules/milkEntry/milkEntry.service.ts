@@ -238,7 +238,7 @@ export const deleteMilkEntry =
 export const getTodayMilkEntries =
     async (
         adminId: string,
-        shift?: "MORNING" | "EVENING" | "BOTH"
+       
     ) => {
 
         const startOfDay =
@@ -270,9 +270,7 @@ export const getTodayMilkEntries =
                         adminId,
                     },
 
-                    ...(shift && {
-                        shift,
-                    }),
+                   
 
                     date: {
                         gte:
