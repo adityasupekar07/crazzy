@@ -1,5 +1,6 @@
 import { prisma }
-from "../../config/prisma.js";
+from "../../db/index.js";
+
 
 import ApiError
 from "../../utils/ApiError.js";

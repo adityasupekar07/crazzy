@@ -1,5 +1,6 @@
 import { prisma }
-from "../../config/prisma.js";
+from "../../db/index.js";
+
 
 import ApiError
 from "../../utils/ApiError.js";
@@ -104,7 +105,7 @@ export const createFoodSale =
 
                     /**
                      * CREATE SALE
-                     */
+                     */ 
 
                     const sale =
                         await tx.foodSale.create({

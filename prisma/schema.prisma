@@ -61,10 +61,9 @@ foodDealers FoodDealer[]
 foodPurchases FoodPurchase[]  
 foodSales FoodSale[]
 
-=======
-  customers  Customer[]
-  rateCharts RateChart[]
->>>>>>> aditya
+
+
+
   /**
    * TIMESTAMPS
    */
@@ -406,7 +405,7 @@ enum RateCategory {
   SALE
 }
 
-}
+
 
 /*Who sells to dairy*/
 model FoodDealer {
