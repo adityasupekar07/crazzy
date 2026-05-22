@@ -1,0 +1,11 @@
+{"environment":"development","level":"warn","message":"🛑 SIGTERM received","service":"dairy-backend","timestamp":"2026-05-22 02:44:31"}
+{"environment":"development","level":"info","message":"Redis disconnected","service":"dairy-backend","timestamp":"2026-05-22 02:44:32"}
+{"environment":"development","error":{"clientVersion":"6.19.0","errorCode":"P1001","name":"PrismaClientInitializationError"},"level":"error","message":"Failed to start server","service":"dairy-backend","timestamp":"2026-05-22 18:12:03"}
+{"environment":"development","error":{"clientVersion":"6.19.0","errorCode":"P1001","name":"PrismaClientInitializationError"},"level":"error","message":"Failed to start server","service":"dairy-backend","timestamp":"2026-05-22 18:12:32"}
+{"environment":"development","error":{"clientVersion":"6.19.0","errorCode":"P1001","name":"PrismaClientInitializationError"},"level":"error","message":"Failed to start server","service":"dairy-backend","timestamp":"2026-05-22 18:45:29"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-22 19:19:48"}
+{"environment":"development","level":"info","message":"✅ Redis connected","service":"dairy-backend","timestamp":"2026-05-22 19:19:48"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-22 19:19:48"}
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-22 22:57:02"}
+{"environment":"development","level":"info","message":"✅ Redis connected","service":"dairy-backend","timestamp":"2026-05-22 22:57:02"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-22 22:57:02"}

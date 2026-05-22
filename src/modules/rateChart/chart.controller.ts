@@ -1,61 +1,102 @@
-import { Request, Response } from "express";
-
 import asyncHandler from "../../utils/asyncHandler.js";
-
 import ApiResponse from "../../utils/ApiResponse.js";
-
-import {
-  createRateChartService,
-  addMatrixRatesService,
-  getRateChartService,
-} from "./chart.service.js";
-
-export const createRateChartController =
-  asyncHandler(async (req, res) => {
+import { RateChartService } from "./chart.service.js";
+import { Request, Response } from "express";
+const createRateChart = asyncHandler(
+  async (req, res) => {
     const adminId = req.user.id;
 
-    const chart =
-      await createRateChartService(
+    const result =
+      await RateChartService.createRateChart(
         adminId,
         req.body
       );
 
-    return res.status(201).json(
+    res.status(201).json(
       new ApiResponse(
         201,
         "Rate chart created",
-        chart
+        result
       )
     );
-  });
+  }
+);
 
-export const addMatrixRatesController =
-  asyncHandler(async (req, res) => {
-    await addMatrixRatesService(
-      req.body.rateChartId,
-      req.body.rates
-    );
+const getAllCharts = asyncHandler(
+  async (req, res ) => {
+    const adminId = req.user.id;
 
-    return res.status(201).json(
+    const result =
+      await RateChartService.getAllCharts(
+        adminId
+      );
+
+    res.status(200).json(
       new ApiResponse(
-        201,
-        "Matrix rates added"
+        200,
+      
+        "Charts fetched",
+          result
       )
     );
-  });
+  }
+);
 
-export const getRateChartController =
-  asyncHandler(async (req, res) => {
-    const chart =
-      await getRateChartService(
+const getSingleChart = asyncHandler(
+  async (req, res) => {
+    const result =
+      await RateChartService.getSingleChart(
         req.params.id as string
       );
 
-    return res.json(
+    res.status(200).json(
       new ApiResponse(
         200,
-        "Rate chart fetched",
-        chart
+        "Chart fetched",
+        result
       )
     );
-  });
+  }
+);
+
+const updateChart = asyncHandler(
+  async (req, res) => {
+    const result =
+      await RateChartService.updateChart(
+        req.params.id as string,
+        req.body
+      );
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "Chart updated",
+        result
+      )
+    );
+  }
+);
+
+const deleteChart = asyncHandler(
+  async (req, res) => {
+    await RateChartService.deleteChart(
+      req.params.id as string
+    );
+
+    res.status(200).json(
+      new ApiResponse(
+        200,
+        "null",
+        "Chart deleted"
+      )
+    );
+  }
+);
+
+export const RateChartController = {
+  createRateChart,
+  getAllCharts,
+  getSingleChart,
+  updateChart,
+  deleteChart,
+};

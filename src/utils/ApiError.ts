@@ -18,7 +18,7 @@ class ApiError extends Error {
             errors?: any[];
 
             isOperational?: boolean;
-        }
+        } 
     ) {
         super(message);
 

@@ -1,90 +1,149 @@
-import {prisma} from "./../../config/prisma.js";
+import prisma from "../../db/index.js";
 
-import ApiError from "../../utils/ApiError.js";
+const createRateChart = async (
+  adminId: string,
+  payload: any
+) => {
+  return prisma.rateChart.create({
+    data: {
+      name: payload.name,
 
-export const createRateChartService =
-  async (
-    adminId: string,
-    payload: any
-  ) => {
-    const chart =
-      await prisma.rateChart.create({
-        data: {
-          name: payload.name,
+      milkType: payload.milkType,
 
-          type: payload.type,
+      category: payload.category,
 
-          milkType: payload.milkType,
+      chartType: payload.chartType,
 
-          shift: payload.shift,
+      method: payload.method,
 
-          isDefault:
-            payload.isDefault || false,
+      baseRate: payload.baseRate,
 
-          adminId,
+      adminId,
 
-          rule: payload.rule
-            ? {
-                create: payload.rule,
-              }
-            : undefined,
-        },
-
-        include: {
-          rule: true,
-        },
-      });
-
-    return chart;
-  };
-
-export const addMatrixRatesService =
-  async (
-    rateChartId: string,
-    rates: any[]
-  ) => {
-    const chart =
-      await prisma.rateChart.findUnique({
-        where: {
-          id: rateChartId,
-        },
-      });
-
-    if (!chart) {
-      throw new ApiError(
-        404,
-        "Rate chart not found"
-      );
-    }
-
-    await prisma.rateMatrix.createMany({
-      data: rates.map((row) => ({
-        rateChartId,
-
-        fat: row.fat,
-
-        snf: row.snf,
-
-        rate: row.rate,
-      })),
-
-      skipDuplicates: true,
-    });
-
-    return true;
-  };
-
-export const getRateChartService =
-  async (chartId: string) => {
-    return prisma.rateChart.findUnique({
-      where: {
-        id: chartId,
+      fatSteps: {
+        create: payload.fatSteps,
       },
 
-      include: {
-        rule: true,
-
-        matrixRates: true,
+      snfSteps: {
+        create: payload.snfSteps,
       },
-    });
-  };
+
+      rules: {
+        create: payload.rules || [],
+      },
+    },
+
+    include: {
+      fatSteps: true,
+      snfSteps: true,
+      rules: true,
+    },
+  });
+};
+
+const getAllCharts = async (
+  adminId: string
+) => {
+  return prisma.rateChart.findMany({
+    where: {
+      adminId,
+    },
+
+    include: {
+      fatSteps: true,
+      snfSteps: true,
+      rules: true,
+    },
+
+    orderBy: {
+      createdAt: "desc",
+    },
+  });
+};
+
+const getSingleChart = async (
+  id: string
+) => {
+  return prisma.rateChart.findUnique({
+    where: {
+      id,
+    },
+
+    include: {
+      fatSteps: true,
+      snfSteps: true,
+      rules: true,
+    },
+  });
+};
+
+const updateChart = async (
+  id: string,
+  payload: any
+) => {
+  await prisma.fatStep.deleteMany({
+    where: {
+      rateChartId: id,
+    },
+  });
+
+  await prisma.snfStep.deleteMany({
+    where: {
+      rateChartId: id,
+    },
+  });
+
+  await prisma.bonusPenaltyRule.deleteMany({
+    where: {
+      rateChartId: id,
+    },
+  });
+
+  return prisma.rateChart.update({
+    where: {
+      id,
+    },
+
+    data: {
+      name: payload.name,
+
+      baseRate: payload.baseRate,
+
+      fatSteps: {
+        create: payload.fatSteps,
+      },
+
+      snfSteps: {
+        create: payload.snfSteps,
+      },
+
+      rules: {
+        create: payload.rules || [],
+      },
+    },
+
+    include: {
+      fatSteps: true,
+      snfSteps: true,
+      rules: true,
+    },
+  });
+};
+
+const deleteChart = async (
+  id: string
+) => {
+  return prisma.rateChart.delete({
+    where: {
+      id,
+    },
+  });
+};
+
+export const RateChartService = {
+  createRateChart,
+  getAllCharts,
+  getSingleChart,
+  updateChart,
+  deleteChart,
+};

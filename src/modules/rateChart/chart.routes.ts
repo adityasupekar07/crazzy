@@ -1,44 +1,87 @@
 import { Router } from "express";
 
-import {
-  createRateChartController,
-  addMatrixRatesController,
-  getRateChartController,
-} from "./chart.controller.js";
+import authMiddleware from "../../middleware/auth.middleware.js";
 
 import { validate } from "../../middleware/validate.middleware.js";
 
 import {
-  createRateChartSchema,
-  createMatrixRatesSchema,
+  createChartSchema,
+  updateChartSchema,
+  chartIdSchema,
 } from "./chart.schema.js";
-import authMiddleware from "../../middleware/auth.middleware.js";
-import { auth } from "firebase-admin";
+
+import { RateChartController } from "./chart.controller.js";
 
 const router = Router();
 
-router.post(
-  "/",
-  validate({
-    body: createRateChartSchema,
-  }),
-  authMiddleware
-  ,
-  createRateChartController
-);
+/**
+ * CREATE
+ */
 
 router.post(
-  "/matrix",
-  validate({
-    body: createMatrixRatesSchema,
-  }),
+  "/create",
+
   authMiddleware,
-  addMatrixRatesController
+
+  validate(createChartSchema),
+
+  RateChartController.createRateChart
 );
+
+/**
+ * GET ALL
+ */
+
+router.get(
+  "/all",
+
+  authMiddleware,
+
+  RateChartController.getAllCharts
+);
+
+/**
+ * GET SINGLE
+ */
 
 router.get(
   "/:id",
-  getRateChartController
+
+  authMiddleware,
+
+  validate(chartIdSchema),
+
+  RateChartController.getSingleChart
+);
+
+/**
+ * UPDATE
+ */
+
+router.patch(
+  "/:id",
+
+  authMiddleware,
+
+  validate(chartIdSchema),
+
+  validate(updateChartSchema),
+
+  RateChartController.updateChart
+);
+
+/**
+ * DELETE
+ */
+
+router.delete(
+  "/:id",
+
+  authMiddleware,
+
+  validate(chartIdSchema),
+
+  RateChartController.deleteChart
 );
 
 export default router;

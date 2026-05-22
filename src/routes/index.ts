@@ -35,4 +35,5 @@ router.use(
     rateChartRoutes
 );
 
+
 export default router;
