@@ -55,13 +55,16 @@ model Admin {
   /**
    * RELATIONS
    */
-
   customers Customer[]
 rateCharts RateChart[]
 foodDealers FoodDealer[]
 foodPurchases FoodPurchase[]  
 foodSales FoodSale[]
 
+=======
+  customers  Customer[]
+  rateCharts RateChart[]
+>>>>>>> aditya
   /**
    * TIMESTAMPS
    */
@@ -252,14 +255,6 @@ enum PaymentMode {
   CREDIT
 }
 
-enum RateChartType {
-  FIXED
-  FAT
-  FAT_SNF
-  FAT_SNF_STEP
-  FAT_SNF_PER_KG
-  MATRIX
-}
 model RateChart {
   id String @id @default(cuid())
 
@@ -269,32 +264,48 @@ model RateChart {
 
   name String
 
-  type RateChartType
-
   milkType MilkType
 
-  shift CollectionShift
+  category RateCategory
 
-  isDefault Boolean @default(false)
+  chartType ChartType
 
-  isActive Boolean @default(true)
+  method RateMethod
 
   /**
-   * OWNER
+   * BASE
+   */
+
+  baseRate Float @default(0)
+
+  /**
+   * RELATION
    */
 
   adminId String
-
-  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  admin   Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   /**
-   * RELATIONS
+   * STEPS
    */
 
-  rule RateRule?
+  fatSteps FatStep[]
 
-  matrixRates RateMatrix[]
+  snfSteps SnfStep[]
 
+  /**
+   * BONUS / PENALTY
+   */
+
+  rules BonusPenaltyRule[]
+
+  /**
+   * STATUS
+   */
+
+  isActive Boolean @default(false)
+
+  effectiveFrom DateTime?
   /**
    * TIMESTAMPS
    */
@@ -304,113 +315,97 @@ model RateChart {
   updatedAt DateTime @updatedAt
 
   @@index([adminId])
-
-  @@index([milkType])
-
-  @@index([shift])
 }
 
-
-
-model RateRule {
+model FatStep {
   id String @id @default(cuid())
+
+  /**
+   * STEP CONFIG
+   */
+
+  startValue Float
+
+  increment Float
 
   /**
    * RELATION
    */
 
-  rateChartId String @unique
+  rateChartId String
 
   rateChart RateChart @relation(fields: [rateChartId], references: [id], onDelete: Cascade)
 
-  /**
-   * =========================================
-   * FIXED RATE
-   * =========================================
-   */
-
-  fixedRate Float?
-
-  /**
-   * =========================================
-   * STEP SYSTEM
-   * =========================================
-   */
-
-  baseFat Float?
-
-  baseSnf Float?
-
-  baseRate Float?
-
-  fatStep Float?
-
-  fatRateIncrement Float?
-
-  snfStep Float?
-
-  snfRateIncrement Float?
-
-  /**
-   * =========================================
-   * PER KG SYSTEM
-   * =========================================
-   */
-
-  fatRatePerKg Float?
-
-  snfRatePerKg Float?
-
-  /**
-   * =========================================
-   * RANGE
-   * =========================================
-   */
-
-  minFat Float?
-
-  maxFat Float?
-
-  minSnf Float?
-
-  maxSnf Float?
-
-  /**
-   * =========================================
-   * EXTRA CONFIG
-   * =========================================
-   */
-
-  config Json?
-
-  /**
-   * TIMESTAMPS
-   */
-
   createdAt DateTime @default(now())
 
-  updatedAt DateTime @updatedAt
+  @@index([rateChartId])
 }
-model RateMatrix {
+
+model SnfStep {
   id String @id @default(cuid())
+
+  /**
+   * STEP CONFIG
+   */
+
+  startValue Float
+
+  increment Float
+
+  /**
+   * RELATION
+   */
 
   rateChartId String
 
   rateChart RateChart @relation(fields: [rateChartId], references: [id], onDelete: Cascade)
 
-  fat Float?
+  createdAt DateTime @default(now())
 
-  snf Float?
+  @@index([rateChartId])
+}
 
-  rate Float
+model BonusPenaltyRule {
+  id String @id @default(cuid())
+
+  /**
+   * RULE TYPE
+   */
+
+  axis RuleAxis
+
+  /**
+   * RANGE
+   */
+
+  fromValue Float
+
+  toValue Float
+
+  /**
+   * BONUS / PENALTY
+   */
+
+  amount Float
+
+  /**
+   * RELATION
+   */
+
+  rateChartId String
+
+  rateChart RateChart @relation(fields: [rateChartId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
 
   @@index([rateChartId])
+}
 
-  @@index([fat, snf])
+enum RateCategory {
+  COLLECTION
+  SALE
+}
 
-  @@unique([rateChartId, fat, snf])
 }
 
 /*Who sells to dairy*/
@@ -638,4 +633,20 @@ model FoodSale {
   @@index([foodPurchaseId])
 
   @@index([saleDate])
+}
+
+enum ChartType {
+  POINT
+  EXCEL
+}
+
+enum RateMethod {
+  FAT_SNF
+  FAT_ONLY
+  FIXED
+}
+
+enum RuleAxis {
+  FAT
+  SNF
 }

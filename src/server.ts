@@ -6,7 +6,7 @@ import app from "./app.js";
 
 import logger from "./config/logger.js";
 
-import { prisma } from "./config/prisma.js";
+import { prisma } from "./db/index.js";
 
 import {
     connectRedis,
