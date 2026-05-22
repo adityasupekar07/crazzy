@@ -59,3 +59,27 @@ export const getCustomers =
             );
         }
     );
+
+    export const debugCustomerApi =
+  asyncHandler(async (req, res) => {
+
+    console.log('\n========================');
+    console.log('[DEBUG CONTROLLER HIT]');
+    console.log('========================');
+
+    console.log('REQ.USER:', req.user);
+
+    const result =
+      await customerService.debugService();
+
+    console.log(
+      '[DEBUG CONTROLLER SUCCESS]'
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Debug API Working',
+      data: result,
+    });
+  });
+  

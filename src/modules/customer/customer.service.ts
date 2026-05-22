@@ -73,3 +73,27 @@ export const getCustomers =
             },
         });
     };
+
+
+    export const debugService = async () => {
+
+  console.log('\n========================');
+  console.log('[DEBUG SERVICE HIT]');
+  console.log('========================');
+
+  /**
+   * SIMPLE DB TEST
+   */
+
+  const totalCustomers =
+    await prisma.customer.count();
+
+  console.log(
+    '[DEBUG SERVICE DB SUCCESS]'
+  );
+
+  return {
+    totalCustomers,
+    timestamp: new Date(),
+  };
+};

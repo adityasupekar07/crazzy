@@ -3,10 +3,11 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-
-  url = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
+
 
 /**
  * ADMIN MODEL
@@ -57,6 +58,10 @@ model Admin {
 
   customers Customer[]
 rateCharts RateChart[]
+foodDealers FoodDealer[]
+foodPurchases FoodPurchase[]  
+foodSales FoodSale[]
+
   /**
    * TIMESTAMPS
    */
@@ -98,6 +103,9 @@ model Customer {
   milkEntries MilkEntry[]
 
   foodEntries FoodEntry[]
+
+  foodSales FoodSale[]
+
 
   /**
    * TIMESTAMPS
@@ -403,4 +411,231 @@ model RateMatrix {
   @@index([fat, snf])
 
   @@unique([rateChartId, fat, snf])
+}
+
+/*Who sells to dairy*/
+model FoodDealer {
+  id String @id @default(cuid())
+
+  /**
+   * DEALER INFO
+   */
+
+  code String
+
+  name String
+
+  phone String?
+
+  address String?
+
+  isActive Boolean @default(true)
+
+  /**
+   * ADMIN RELATION
+   */
+
+  adminId String
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+/**
+   *  this relation will be used later -- for analytics part in dealers section 
+   */
+foodPurchases FoodPurchase[]
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  /**
+   * INDEXES
+   */
+
+  @@unique([adminId, code])
+
+  @@index([adminId])
+
+  @@index([name])
+
+  @@index([phone])
+}
+
+
+/* What dairy purchased from dealer */
+model FoodPurchase {
+  id String @id @default(cuid())
+
+  /**
+   * OWNER
+   */
+
+  adminId String
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  /**
+   * DEALER
+   */
+
+  dealerId String
+
+  dealer FoodDealer @relation(fields: [dealerId], references: [id], onDelete: Restrict)
+
+  /**
+   * FOOD INFO
+   */
+
+  foodName String
+
+  quantity Float
+
+  remainingQuantity Float
+
+  /**
+   * RATES
+   */
+
+  buyRate Float
+
+  sellRate Float
+
+  /**
+   * PAYMENTS
+   */
+
+  totalAmount Float
+
+  amountPaid Float
+
+  pendingAmount Float
+
+  /**
+   * PURCHASE DATE
+   */
+
+  purchaseDate DateTime
+
+  /**
+   * STATUS
+   */
+
+  isActive Boolean @default(true)
+
+  foodSales FoodSale[]
+  
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  /**
+   * INDEXES
+   */
+
+  @@index([adminId])
+
+  @@index([dealerId])
+
+  @@index([foodName])
+
+  @@index([purchaseDate])
+
+  @@index([remainingQuantity])
+}
+
+
+/* What dairy sold to farmers */
+model FoodSale {
+  id String @id @default(cuid())
+
+  /**
+   * OWNER
+   */
+
+  adminId String
+
+  admin Admin @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  /**
+   * CUSTOMER
+   */
+
+  customerId String
+
+  customer Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  /**
+   * PURCHASE SOURCE
+   */
+
+  foodPurchaseId String
+
+  foodPurchase FoodPurchase @relation(fields: [foodPurchaseId], references: [id], onDelete: Restrict)
+
+  /**
+   * FOOD INFO
+   */
+
+  foodName String
+
+  quantity Float
+
+  sellRate Float
+
+  /**
+   * PAYMENT
+   */
+
+  totalAmount Float
+
+  amountPaid Float
+
+  pendingAmount Float
+
+  /**
+   * PAYMENT MODE
+   */
+
+  isCashPayment Boolean @default(false)
+
+  /**
+   * SALE DATE
+   */
+
+  saleDate DateTime
+
+  /**
+   * STATUS
+   */
+
+  isActive Boolean @default(true)
+
+  /**
+   * TIMESTAMPS
+   */
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  /**
+   * INDEXES
+   */
+
+  @@index([adminId])
+
+  @@index([customerId])
+
+  @@index([foodPurchaseId])
+
+  @@index([saleDate])
 }

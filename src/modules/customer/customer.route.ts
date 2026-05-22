@@ -9,7 +9,7 @@ from "../../middleware/validate.middleware.js";
 
 import {
     addCustomer,
-    getCustomers,
+    getCustomers,debugCustomerApi
 } from "./customer.controller.js";
 
 import {
@@ -50,5 +50,14 @@ router.get(
 
     getCustomers
 );
+
+router.get(
+  '/debug-test',
+
+  authMiddleware,
+
+  debugCustomerApi
+);
+
 
 export default router;

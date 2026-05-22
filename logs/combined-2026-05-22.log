@@ -1,0 +1,2 @@
+{"environment":"development","level":"info","message":"✅ PostgreSQL connected","service":"dairy-backend","timestamp":"2026-05-22 23:09:39"}
+{"environment":"development","level":"info","message":"🚀 Server running in development mode on port 5000","service":"dairy-backend","timestamp":"2026-05-22 23:09:39"}

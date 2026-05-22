@@ -34,7 +34,7 @@ const startServer = async () => {
             "✅ PostgreSQL connected"
         );
 
-        await connectRedis();
+        // await connectRedis();
 
         const server = app.listen(
             PORT,"0.0.0.0",
