@@ -49,7 +49,7 @@ router.post(
  */
 
 router.get(
-    "/",
+    "/get-all-sales",
 
     authMiddleware,
 

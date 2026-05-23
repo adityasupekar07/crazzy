@@ -150,7 +150,7 @@ export const createFoodSale =
 
                                         name: true,
 
-                                        customerCode:
+                                        code:
                                             true,
                                     },
                                 },
@@ -208,7 +208,7 @@ export const getAllFoodSales =
 
                 customer: {
                     select: {
-                        customerCode:
+                        code:
                             true,
 
                         name: true,
@@ -252,7 +252,7 @@ export const getPendingFoodSales =
 
                 customer: {
                     select: {
-                        customerCode:
+                        code:
                             true,
 
                         name: true,
@@ -360,7 +360,7 @@ export const updateFoodSale =
 
                 customer: {
                     select: {
-                        customerCode:
+                        code:
                             true,
 
                         name: true,
