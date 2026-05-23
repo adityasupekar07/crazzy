@@ -9,11 +9,11 @@ from "../../middleware/validate.middleware.js";
 
 import {
     addMilkEntry,
-    getCustomerMilkEntries,
     getMilkEntryById,
     updateMilkEntry,
     deleteMilkEntry,
     getTodayMilkEntries,
+    getMilkEntriesByDate,
 } from "./milkEntry.controller.js";
 
 import {
@@ -57,13 +57,13 @@ router.get(
  * =====================================================
  */
 
-router.get(
-    "/customer/:customerId",
+// router.get(
+//     "/customer/:customerId",
 
-    authMiddleware,
+//     authMiddleware,
 
-    getCustomerMilkEntries
-);
+//     getCustomerMilkEntries
+// );
 
 /**
  * =====================================================
@@ -78,6 +78,15 @@ router.get(
 
     getMilkEntryById
 );
+router.get(
+    "/milk-entry/by-date",
+
+    authMiddleware,
+
+
+    getMilkEntriesByDate);
+
+
 
 /**
  * =====================================================

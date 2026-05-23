@@ -1,296 +1,913 @@
-import { number } from "zod";
-import { prisma }
-from "../../db/index.js";
+// ========================================
+// milkEntry.service.ts
+// ========================================
 
-import ApiError
-from "../../utils/ApiError.js";
+import prisma from "../../db/index.js";
+
+import ApiError from "../../utils/ApiError.js";
+
+import logger from "../../config/logger.js";
+
+import { cache } from "../../services/cache.service.js";
+
+import { cacheKeys } from "../../utils/cacheKeys.js";
+
+import {
+  getTodayDate,
+  getTodayEnd,
+  getTodayStart,
+} from "./milkEntry.helper.js";
 
 /**
- * =====================================================
- * ADD MILK ENTRY
- * =====================================================
+ * ========================================
+ * CONSTANTS
+ * ========================================
  */
 
+const TODAY_ENTRIES_CACHE_TTL =
+  60 * 60 * 5;
 
+/**
+ * ========================================
+ * GET TODAY MILK ENTRIES
+ * ========================================
+ */
 
-export const addMilkEntry =
-    async (
-        adminId: string,
+const getTodayMilkEntries =
+  async (
+    adminId: string
+  ) => {
 
-        data: any
-    ) => {
+    /**
+     * TODAY DATE
+     */
 
-        /**
-         * FIND CUSTOMER
-         * USING:
-         * adminId + customerCode
-         */
+    const today =
+      getTodayDate();
 
-        const customer =
-            await prisma.customer.findFirst({
-                where: {
-                    adminId,
+    /**
+     * CACHE KEY
+     */
 
-                    code:
-                    Number   ( data.customerCode),
-                },
-            });
+    const cacheKey =
+      cacheKeys.todayMilkEntries(
+        adminId,
+        today
+      );
 
-        if (!customer) {
-            throw new ApiError(
-                404,
-                "Customer not found"
-            );
+    /**
+     * CACHE HIT
+     */
+
+    const cachedEntries =
+      await cache.get<any[]>(
+        cacheKey
+      );
+
+    if (cachedEntries) {
+
+      logger.info(
+        "REDIS HIT: TODAY MILK ENTRIES",
+        {
+          adminId,
+
+          cacheKey,
         }
+      );
 
-        /**
-         * CREATE ENTRY
-         */
+      return cachedEntries;
+    }
 
-        return prisma.milkEntry.create({
-            data: {
-                customerId:
-                    customer.id,
+    logger.info(
+      "REDIS MISS: TODAY MILK ENTRIES",
+      {
+        adminId,
 
-                date:
-                    new Date(
-                        data.date
-                    ),
+        cacheKey,
+      }
+    );
 
-                shift:
-                    data.shift,
+    /**
+     * DATABASE QUERY
+     */
 
-                milkType:
-                    data.milkType,
+    const entries =
+      await prisma.milkEntry.findMany({
+        where: {
+          customer: {
+            adminId,
+          },
 
-                quantity:
-                    data.quantity,
+          date: {
+            gte:
+              getTodayStart(),
 
-                fat:
-                    data.fat,
+            lte:
+              getTodayEnd(),
+          },
+        },
 
-                snf:
-                    data.snf,
+        include: {
+          customer: true,
+        },
 
-                rate:
-                    data.rate,
+        orderBy: {
+          createdAt:
+            "desc",
+        },
+      });
 
-                totalAmount:
-                    data.totalAmount,
-            },
-        });
-    };
-/**
- * =====================================================
- * GET CUSTOMER ENTRIES
- * =====================================================
- */
+    /**
+     * STORE CACHE
+     */
 
-export const getCustomerMilkEntries =
-    async (
-        customerId: string,
-        page: number,
-        limit: number
-    ) => {
+    await cache.set(
+      cacheKey,
+      entries,
+      TODAY_ENTRIES_CACHE_TTL
+    );
 
-        const skip =
-            (page - 1) * limit;
+    logger.info(
+      "TODAY MILK ENTRIES STORED IN REDIS",
+      {
+        adminId,
 
-        const entries =
-            await prisma.milkEntry.findMany({
-                where: {
-                    customerId,
-                },
+        cacheKey,
 
-                orderBy: {
-                    date:
-                        "desc",
-                },
+        totalEntries:
+          entries.length,
+      }
+    );
 
-                skip,
-
-                take: limit,
-            });
-
-        const total =
-            await prisma.milkEntry.count({
-                where: {
-                    customerId,
-                },
-            });
-
-        return {
-            entries,
-
-            pagination: {
-                total,
-
-                page,
-
-                limit,
-
-                totalPages:
-                    Math.ceil(
-                        total / limit
-                    ),
-            },
-        };
-    };
+    return entries;
+  };
 
 /**
- * =====================================================
+ * ========================================
  * GET SINGLE ENTRY
- * =====================================================
+ * ========================================
  */
 
-export const getMilkEntryById =
-    async (id: string) => {
+const getSingleMilkEntry =
+  async (
+    id: string
+  ) => {
 
-        const entry =
-            await prisma.milkEntry.findUnique({
-                where: {
-                    id,
-                },
-            });
+    const entry =
+      await prisma.milkEntry.findUnique({
+        where: {
+          id,
+        },
 
-        if (!entry) {
-            throw new ApiError(
-                404,
-                "Milk entry not found"
-            );
-        }
+        include: {
+          customer: true,
+        },
+      });
 
-        return entry;
-    };
+    /**
+     * NOT FOUND
+     */
+
+    if (!entry) {
+
+      logger.warn(
+        "MILK ENTRY NOT FOUND",
+        { id }
+      );
+
+      throw new ApiError(
+        404,
+        "Milk entry not found"
+      );
+    }
+
+    return entry;
+  };
 
 /**
- * =====================================================
+ * ========================================
+ * CREATE ENTRY
+ * ========================================
+ */
+
+// ========================================
+// CREATE MILK ENTRY
+// ========================================
+
+const createMilkEntry =
+  async (
+    adminId: string,
+    payload: any
+  ) => {
+
+    /**
+     * VALIDATION
+     */
+
+    if (!payload.code) {
+
+      logger.warn(
+        "CUSTOMER CODE MISSING"
+      );
+
+      throw new ApiError(
+        400,
+        "Customer code is required"
+      );
+    }
+
+    /**
+     * FIND CUSTOMER
+     * USING ADMIN ID + CODE
+     */
+
+    const customer =
+      await prisma.customer.findFirst({
+        where: {
+          adminId,
+
+          code:
+            payload.code,
+        },
+      });
+
+    /**
+     * CUSTOMER NOT FOUND
+     */
+
+    if (!customer) {
+
+      logger.warn(
+        "CUSTOMER NOT FOUND",
+        {
+          adminId,
+
+          code:
+            payload.code,
+        }
+      );
+
+      throw new ApiError(
+        404,
+        "Customer not found"
+      );
+    }
+
+    /**
+     * DATE
+     */
+
+    const entryDate = getTodayStart();
+    //   new Date(
+    //     payload.date
+    //   );
+
+    /**
+     * CHECK EXISTING ENTRY
+     * SAME DATE + SHIFT
+     */
+
+    const existingEntry =
+      await prisma.milkEntry.findFirst({
+        where: {
+
+          customerId:
+            customer.id,
+
+          shift:
+            payload.shift,
+          date: {
+            gte: getTodayStart(),
+            lte: getTodayEnd(),
+          },
+        },
+      });
+
+    /**
+     * ALREADY EXISTS
+     */
+
+    if (existingEntry) {
+
+      logger.warn(
+        "ENTRY ALREADY EXISTS",
+        {
+          customerId:
+            customer.id,
+
+          date:
+            payload.date,
+
+          shift:
+            payload.shift,
+        }
+      );
+
+      throw new ApiError(
+        400,
+        `Entry for ${payload.shift} shift already exists on this date`
+      );
+    }
+
+    /**
+     * CREATE ENTRY
+     */
+
+    const newEntry =
+      await prisma.milkEntry.create({
+        data: {
+
+          customerId:
+            customer.id,
+
+          date:
+            entryDate,
+
+          shift:
+            payload.shift,
+
+          milkType:
+            payload.milkType,
+
+          quantity:
+            payload.quantity,
+
+          fat:
+            payload.fat,
+
+          snf:
+            payload.snf,
+
+          rate:
+            payload.rate,
+
+          totalAmount:
+            payload.totalAmount,
+        },
+
+        include: {
+          customer: true,
+        },
+      });
+
+    logger.info(
+      "MILK ENTRY CREATED",
+      {
+        entryId:
+          newEntry.id,
+
+        customerId:
+          customer.id,
+
+        code:
+          customer.code,
+
+        adminId,
+      }
+    );
+
+    /**
+     * TODAY DATE
+     */
+
+    const today =
+      getTodayDate();
+
+    /**
+     * CACHE KEY
+     */
+
+    const cacheKey =
+      cacheKeys.todayMilkEntries(
+        adminId,
+        today
+      );
+
+    /**
+     * GET CACHE
+     */
+
+    const cachedEntries =
+      await cache.get<any[]>(
+        cacheKey
+      );
+
+    /**
+     * UPDATE CACHE
+     */
+
+    if (cachedEntries) {
+
+      logger.info(
+        "UPDATING TODAY ENTRIES CACHE",
+        {
+          cacheKey,
+        }
+      );
+
+      /**
+       * ADD NEW ENTRY
+       */
+
+      cachedEntries.unshift(
+        newEntry
+      );
+
+      /**
+       * SAVE UPDATED CACHE
+       */
+
+      await cache.set(
+        cacheKey,
+        cachedEntries,
+        TODAY_ENTRIES_CACHE_TTL
+      );
+    }
+
+    /**
+     * CLEAR DAYWISE CACHE
+     */
+
+    await cache.clearPattern(
+      `milk-entries-by-date:${adminId}:*`
+    );
+
+    return newEntry;
+  };
+/**
+ * ========================================
  * UPDATE ENTRY
- * =====================================================
+ * ========================================
  */
 
-export const updateMilkEntry =
-    async (
-        id: string,
-        data: any
-    ) => {
+const updateMilkEntry =
+  async (
+    adminId: string,
+    id: string,
+    payload: any
+  ) => {
 
-        const existingEntry =
-            await prisma.milkEntry.findUnique({
-                where: {
-                    id,
-                },
-            });
+    /**
+     * CHECK EXISTING
+     */
 
-        if (!existingEntry) {
-            throw new ApiError(
-                404,
-                "Milk entry not found"
-            );
+    const existingEntry =
+      await prisma.milkEntry.findUnique({
+        where: {
+          id,
+        },
+      });
+
+    if (!existingEntry) {
+
+      logger.warn(
+        "MILK ENTRY NOT FOUND FOR UPDATE",
+        { id }
+      );
+
+      throw new ApiError(
+        404,
+        "Milk entry not found"
+      );
+    }
+
+    /**
+     * UPDATE DATABASE
+     */
+
+    const updatedEntry =
+      await prisma.milkEntry.update({
+        where: {
+          id,
+        },
+
+        data: {
+          quantity:
+            payload.quantity,
+
+          fat:
+            payload.fat,
+
+          snf:
+            payload.snf,
+
+          rate:
+            payload.rate,
+
+          totalAmount:
+            payload.totalAmount,
+        },
+
+        include: {
+          customer: true,
+        },
+      });
+
+    logger.info(
+      "MILK ENTRY UPDATED",
+      {
+        entryId:
+          updatedEntry.id,
+
+        adminId,
+      }
+    );
+
+    /**
+     * TODAY DATE
+     */
+
+    const today =
+      getTodayDate();
+
+    /**
+     * CACHE KEY
+     */
+
+    const cacheKey =
+      cacheKeys.todayMilkEntries(
+        adminId,
+        today
+      );
+    await cache.clearPattern(
+      `milk-entries-by-date:${adminId}:*`
+    );
+    /**
+     * GET CACHE
+     */
+
+    const cachedEntries =
+      await cache.get<any[]>(
+        cacheKey
+      );
+
+    /**
+     * UPDATE CACHE
+     */
+
+    if (cachedEntries) {
+
+      logger.info(
+        "UPDATING REDIS CACHE AFTER UPDATE",
+        {
+          cacheKey,
+
+          entryId:
+            updatedEntry.id,
         }
+      );
 
-        return prisma.milkEntry.update({
-            where: {
-                id,
-            },
+      const updatedCache =
+        cachedEntries.map(
+          (entry) => {
 
-            data,
-        });
-    };
+            if (
+              entry.id === id
+            ) {
+              return updatedEntry;
+            }
+
+            return entry;
+          }
+        );
+
+      /**
+       * SAVE CACHE
+       */
+
+      await cache.set(
+        cacheKey,
+        updatedCache,
+        TODAY_ENTRIES_CACHE_TTL
+      );
+    }
+
+    return updatedEntry;
+  };
 
 /**
- * =====================================================
+ * ========================================
  * DELETE ENTRY
- * =====================================================
+ * ========================================
  */
 
-export const deleteMilkEntry =
-    async (id: string) => {
+const deleteMilkEntry =
+  async (
+    adminId: string,
+    id: string
+  ) => {
 
-        const existingEntry =
-            await prisma.milkEntry.findUnique({
-                where: {
-                    id,
-                },
-            });
+    /**
+     * CHECK EXISTING
+     */
 
-        if (!existingEntry) {
-            throw new ApiError(
-                404,
-                "Milk entry not found"
-            );
+    const existingEntry =
+      await prisma.milkEntry.findUnique({
+        where: {
+          id,
+        },
+      });
+
+    if (!existingEntry) {
+
+      logger.warn(
+        "MILK ENTRY NOT FOUND FOR DELETE",
+        { id }
+      );
+
+      throw new ApiError(
+        404,
+        "Milk entry not found"
+      );
+    }
+
+    /**
+     * DELETE DATABASE ENTRY
+     */
+
+    const deletedEntry =
+      await prisma.milkEntry.delete({
+        where: {
+          id,
+        },
+      });
+
+    logger.info(
+      "MILK ENTRY DELETED",
+      {
+        entryId:
+          deletedEntry.id,
+
+        adminId,
+      }
+    );
+
+    /**
+     * TODAY DATE
+     */
+
+    const today =
+      getTodayDate();
+
+    /**
+     * CACHE KEY
+     */
+
+    const cacheKey =
+      cacheKeys.todayMilkEntries(
+        adminId,
+        today
+      );
+
+    await cache.clearPattern(
+      `milk-entries-by-date:${adminId}:*`
+    );
+    /**
+     * GET CACHE
+     */
+
+    const cachedEntries =
+      await cache.get<any[]>(
+        cacheKey
+      );
+
+    /**
+     * REMOVE FROM CACHE
+     */
+
+    if (cachedEntries) {
+
+      logger.info(
+        "REMOVING ENTRY FROM REDIS CACHE",
+        {
+          cacheKey,
+
+          entryId:
+            deletedEntry.id,
         }
+      );
 
-        await prisma.milkEntry.delete({
-            where: {
-                id,
-            },
-        });
+      const filteredEntries =
+        cachedEntries.filter(
+          (entry) =>
+            entry.id !== id
+        );
 
-        return null;
-    };
-     /**
- * =====================================================
- * GET TODAY ENTRIES
- * =====================================================
+      /**
+       * SAVE CACHE
+       */
+
+      await cache.set(
+        cacheKey,
+        filteredEntries,
+        TODAY_ENTRIES_CACHE_TTL
+      );
+    }
+
+    return deletedEntry;
+  };
+
+// ========================================
+// GET ALL MILK ENTRIES DAYWISE
+// WITH REDIS CACHE (10 MINUTES)
+// ========================================
+
+const ALL_ENTRIES_CACHE_TTL =
+  60 * 10;
+
+/**
+ * ========================================
+ * GET ALL MILK ENTRIES DAYWISE
+ * ========================================
  */
 
-export const getTodayMilkEntries =
-    async (
-        adminId: string,
-       
-    ) => {
+// ========================================
+// GET MILK ENTRIES BY DATE
+// ========================================
 
-        const startOfDay =
-            new Date();
+const getMilkEntriesByDate =
+  async (
+    adminId: string,
+    date: string,
+    page = 1,
+    limit = 50
+  ) => {
 
-        startOfDay.setHours(
-            0,
-            0,
-            0,
-            0
-        );
+    /**
+     * CACHE KEY
+     */
 
-        const endOfDay =
-            new Date();
+    const cacheKey =
+      cacheKeys.milkEntriesByDate(
+        adminId,
+        date,
+        page,
+        limit
+      );
 
-        endOfDay.setHours(
-            23,
-            59,
-            59,
-            999
-        );
+    /**
+     * CACHE HIT
+     */
 
-        const entries =
-            await prisma.milkEntry.findMany({
+    const cached =
+      await cache.get<any>(
+        cacheKey
+      );
 
-                where: {
+    if (cached) {
 
-                    customer: {
-                        adminId,
-                    },
+      logger.info(
+        "REDIS HIT: MILK ENTRIES BY DATE",
+        {
+          adminId,
 
-                   
+          date,
 
-                    date: {
-                        gte:
-                            startOfDay,
+          cacheKey,
+        }
+      );
 
-                        lte:
-                            endOfDay,
-                    },
-                },
+      return cached;
+    }
 
-                include: {
-                    customer: true,
-                },
+    /**
+     * DATE RANGE
+     */
 
-                orderBy: {
-                    createdAt:
-                        "desc",
-                },
-            });
-            console.log(entries);
+    const start =
+      new Date(date);
 
-        return entries;
+    start.setHours(
+      0,
+      0,
+      0,
+      0
+    );
+
+    const end =
+      new Date(date);
+
+    end.setHours(
+      23,
+      59,
+      59,
+      999
+    );
+
+    /**
+     * PAGINATION
+     */
+
+    const skip =
+      (page - 1) * limit;
+
+    /**
+     * FETCH ENTRIES
+     */
+
+    const entries =
+      await prisma.milkEntry.findMany({
+        where: {
+          customer: {
+            adminId,
+          },
+
+          date: {
+            gte: start,
+
+            lte: end,
+          },
+        },
+
+        include: {
+          customer: true,
+        },
+
+        orderBy: {
+          createdAt:
+            "desc",
+        },
+
+        skip,
+
+        take: limit,
+      });
+
+    /**
+     * TOTAL
+     */
+
+    const totalEntries =
+      await prisma.milkEntry.count({
+        where: {
+          customer: {
+            adminId,
+          },
+
+          date: {
+            gte: start,
+
+            lte: end,
+          },
+        },
+      });
+
+    /**
+     * RESPONSE
+     */
+
+    const response = {
+
+      entries,
+
+      pagination: {
+
+        page,
+
+        limit,
+
+        totalEntries,
+
+        totalPages:
+          Math.ceil(
+            totalEntries /
+            limit
+          ),
+      },
     };
+
+    /**
+     * STORE CACHE
+     */
+
+    await cache.set(
+      cacheKey,
+      response,
+      60 * 10
+    );
+
+    logger.info(
+      "MILK ENTRIES BY DATE STORED IN REDIS",
+      {
+        adminId,
+
+        date,
+
+        cacheKey,
+      }
+    );
+
+    return response;
+  };
+export const milkEntryService = {
+  getMilkEntriesByDate,
+  getTodayMilkEntries,
+
+  getSingleMilkEntry,
+
+  createMilkEntry,
+
+  updateMilkEntry,
+
+  deleteMilkEntry,
+};

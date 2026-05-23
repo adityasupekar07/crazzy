@@ -1,3 +1,7 @@
+// ================================
+// chart.routes.ts
+// ================================
+
 import { Router } from "express";
 
 import authMiddleware from "../../middleware/auth.middleware.js";
@@ -15,7 +19,7 @@ import { RateChartController } from "./chart.controller.js";
 const router = Router();
 
 /**
- * CREATE
+ * CREATE CHART
  */
 
 router.post(
@@ -29,7 +33,7 @@ router.post(
 );
 
 /**
- * GET ALL
+ * GET ALL CHARTS
  */
 
 router.get(
@@ -38,6 +42,18 @@ router.get(
   authMiddleware,
 
   RateChartController.getAllCharts
+);
+
+/**
+ * GET ACTIVE CHART
+ */
+
+router.get(
+  "/active",
+
+  authMiddleware,
+
+  RateChartController.getActiveChart
 );
 
 /**
