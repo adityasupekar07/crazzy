@@ -244,6 +244,72 @@ enum PaymentMode {
   CREDIT
 }
 
+// model RateChart {
+//   id String @id @default(cuid())
+
+//   /**
+//    * BASIC INFO
+//    */
+
+//   name String
+
+//   milkType MilkType
+
+//   category RateCategory
+
+//   chartType ChartType
+
+//   method RateMethod
+
+//   /**
+//    * BASE
+//    */
+
+//   baseRate Float @default(0)
+
+//   /**
+//    * RELATION
+//    */
+
+//   adminId String
+//   admin   Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+//   /**
+//    * STEPS
+//    */
+
+//   fatSteps FatStep[]
+
+//   snfSteps SnfStep[]
+
+//   /**
+//    * BONUS / PENALTY
+//    */
+
+//   rules BonusPenaltyRule[]
+
+//   /**
+//    * STATUS
+//    */
+
+//   isActive Boolean @default(false)
+
+//   effectiveFrom DateTime?
+//   /**
+//    * TIMESTAMPS
+//    */
+
+//   createdAt DateTime @default(now())
+
+//   updatedAt DateTime @updatedAt
+
+//   @@index([adminId])
+// }
+
+// ================================
+// prisma/schema.prisma
+// ================================
+
 model RateChart {
   id String @id @default(cuid())
 
@@ -268,33 +334,31 @@ model RateChart {
   baseRate Float @default(0)
 
   /**
+   * STATUS
+   */
+
+  isActive Boolean @default(true)
+
+  /**
+   * OPTIONAL VERSIONING
+   */
+
+  effectiveFrom DateTime?
+
+  /**
    * RELATION
    */
 
   adminId String
-  admin   Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
-  /**
-   * STEPS
-   */
+  admin Admin  @relation(fields: [adminId], references: [id], onDelete: Cascade)
 
   fatSteps FatStep[]
 
   snfSteps SnfStep[]
 
-  /**
-   * BONUS / PENALTY
-   */
-
   rules BonusPenaltyRule[]
 
-  /**
-   * STATUS
-   */
-
-  isActive Boolean @default(false)
-
-  effectiveFrom DateTime?
   /**
    * TIMESTAMPS
    */
@@ -304,8 +368,15 @@ model RateChart {
   updatedAt DateTime @updatedAt
 
   @@index([adminId])
-}
 
+  @@index([milkType])
+
+  @@index([category])
+
+  @@index([method])
+
+  @@index([isActive])
+}
 model FatStep {
   id String @id @default(cuid())
 

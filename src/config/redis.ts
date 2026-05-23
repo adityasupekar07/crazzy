@@ -1,84 +1,140 @@
 import {
-    createClient,
-    type RedisClientType,
+  createClient,
+  type RedisClientType,
 } from "redis";
 
 import logger from "./logger.js";
 
 const globalForRedis =
-    globalThis as unknown as {
-        redis: RedisClientType | undefined;
-    };
+  globalThis as unknown as {
+    redis:
+      | RedisClientType
+      | undefined;
+  };
 
 export const redis: RedisClientType =
-    globalForRedis.redis ??
-    createClient({
-        url:
-            process.env.REDIS_URL ??
-            "redis://127.0.0.1:6379",
-    });
+  globalForRedis.redis ??
+  createClient({
+    url:
+      process.env.REDIS_URL ??
+      "redis://127.0.0.1:6379",
+  });
 
 let connected = false;
 
-export const isRedisConnected = (): boolean =>
-    connected;
+/**
+ * STATUS
+ */
+
+export const isRedisConnected =
+  (): boolean => connected;
+
+/**
+ * EVENTS
+ */
 
 redis.on(
-    "error",
-    (error) => {
-        logger.error(
-            "Redis client error",
-            { error }
-        );
-    }
+  "connect",
+  () => {
+    logger.info(
+      "Redis connecting..."
+    );
+  }
 );
 
+redis.on(
+  "ready",
+  () => {
+    connected = true;
+
+    logger.info(
+      "✅ Redis ready"
+    );
+  }
+);
+
+redis.on(
+  "end",
+  () => {
+    connected = false;
+
+    logger.warn(
+      "Redis disconnected"
+    );
+  }
+);
+
+redis.on(
+  "error",
+  (error) => {
+    connected = false;
+
+    logger.error(
+      "Redis client error",
+      { error }
+    );
+  }
+);
+
+/**
+ * CONNECT
+ */
+
 export const connectRedis =
-    async (): Promise<void> => {
-        if (connected) {
-            return;
-        }
+  async (): Promise<void> => {
 
-        try {
-            if (!redis.isOpen) {
-                await redis.connect();
-            }
+    try {
 
-            connected = true;
+      if (!redis.isOpen) {
+        await redis.connect();
+      }
 
-            logger.info(
-                "✅ Redis connected"
-            );
-        } catch (error) {
-            connected = false;
+    } catch (error) {
 
-            logger.warn(
-                "Redis unavailable",
-                { error }
-            );
+      connected = false;
 
-            throw error;
-        }
-    };
+      logger.warn(
+        "Redis unavailable",
+        { error }
+      );
+    }
+  };
+
+/**
+ * DISCONNECT
+ */
 
 export const disconnectRedis =
-    async (): Promise<void> => {
-        if (!redis.isOpen) {
-            connected = false;
-            return;
-        }
+  async (): Promise<void> => {
 
+    try {
+
+      if (redis.isOpen) {
         await redis.quit();
-        connected = false;
+      }
 
-        logger.info(
-            "Redis disconnected"
-        );
-    };
+      connected = false;
+
+      logger.info(
+        "Redis disconnected"
+      );
+
+    } catch (error) {
+
+      logger.error(
+        "Redis disconnect error",
+        { error }
+      );
+    }
+  };
+
+/**
+ * DEV HOT RELOAD
+ */
 
 if (
-    process.env.NODE_ENV !==
-    "production"
+  process.env.NODE_ENV !==
+  "production"
 ) {
-    globalForRedis.redis = redis;
+  globalForRedis.redis = redis;
 }

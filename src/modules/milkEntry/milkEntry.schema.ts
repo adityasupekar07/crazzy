@@ -12,8 +12,11 @@ export const addMilkEntrySchema =
         customerCode:
             z.string(),
 
+        code:
+            z.number(),
+
         date:
-            z.string(),
+            z.string().optional(),
 
         shift:
             z.enum([
