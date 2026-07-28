@@ -8,6 +8,7 @@ import rateChartRoutes from "../modules/rateChart/chart.routes.js";
 import foodDealerRoutes from "../modules/foodDealers/foodDealer.routes.js";
 import foodPurchaseRoutes from "../modules/foodPurchases/foodPurchase.routes.js";
 import foodSaleRoutes from "../modules/foodSales/foodSale.routes.js";
+import advanceRoutes from "../modules/Advance/advance.routes.js";
 
 const router = Router();
 
@@ -56,6 +57,13 @@ router.use(
 
     foodSaleRoutes
 );
+
+router.use(
+    "/advance",
+    advanceRoutes
+);
+
+
 
 
 export default router;

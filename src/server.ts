@@ -16,17 +16,13 @@ import {
 const PORT =
     Number(process.env.PORT) || 5000;
 
-/**
- * =====================================================
- * START SERVER
- * =====================================================
- */
+
+ // START SERVER
+
 
 const startServer = async () => {
     try {
-        /**
-         * TEST DATABASE CONNECTION
-         */
+        // TEST DATABASE CONNECTION
 
         await prisma.$connect();
 
@@ -45,11 +41,9 @@ const startServer = async () => {
             }
         );
 
-        /**
-         * =================================================
-         * GRACEFUL SHUTDOWN
-         * =================================================
-         */
+        
+        // GRACEFUL SHUTDOWN
+         
 
         const shutdown = async (
             signal: string
@@ -80,11 +74,9 @@ const startServer = async () => {
             shutdown
         );
 
-        /**
-         * =================================================
-         * UNHANDLED ERRORS
-         * =================================================
-         */
+    
+        // UNHANDLED ERRORS
+        
 
         process.on(
             "unhandledRejection",

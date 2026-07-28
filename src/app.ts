@@ -1,7 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
-import compression from "compression";
+import compression from "compression"; 
 import cookieParser from "cookie-parser";
 import hpp from "hpp";
 import morgan from "morgan";
@@ -10,7 +10,7 @@ import { apiLimiter } from "./middleware/rateLimiter.js";
 import errorMiddleware from "./middleware/error.middleware.js";
 
 const app = express();
-
+  
 app.use(cors());
 
 app.use(express.json());
