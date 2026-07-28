@@ -1,0 +1,95 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,300;1,400;1,500;1,600;1,700&family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-sans: 'Inter', sans-serif;
+  --font-display: 'Outfit', sans-serif;
+  
+  /* Atlassian Primary Blue Brand Color Palette */
+  --color-brand-50: #deebff;
+  --color-brand-100: #b3d4ff;
+  --color-brand-200: #4c9aff;
+  --color-brand-300: #2684ff;
+  --color-brand-400: #0065ff;
+  --color-brand-500: #0052cc;
+  --color-brand-600: #0747a6;
+  --color-brand-700: #003380;
+  --color-brand-800: #00225c;
+  --color-brand-900: #001138;
+}
+
+/* Custom Base Styles for Atlassian Light Theme */
+body {
+  font-family: var(--font-sans);
+  background-color: #ffffff;
+  color: #091e42;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Premium Light Panel Cards with subtle border shadows */
+.light-panel {
+  background: #ffffff;
+  border: 1px solid #dfe1e6;
+  box-shadow: 0 4px 12px rgba(9, 30, 66, 0.08), 0 0 1px rgba(9, 30, 66, 0.31);
+}
+
+.light-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(9, 30, 66, 0.06), 0 0 1px rgba(9, 30, 66, 0.2);
+}
+
+.light-input {
+  background: #fafbfc;
+  border: 1px solid #dfe1e6;
+  color: #091e42;
+  transition: all 0.2s ease;
+}
+
+.light-input:focus {
+  outline: none;
+  background: #ffffff;
+  border-color: var(--color-brand-400);
+  box-shadow: 0 0 0 2px rgba(0, 101, 255, 0.25);
+}
+
+/* Tab Capsule Bar Theme (matches the black Pages capsule in the screenshot) */
+.tab-capsule-bar {
+  background: #f4f5f7;
+  border: 1px solid #ebecf0;
+}
+
+.tab-btn-active {
+  background: #091e42;
+  color: #ffffff;
+  box-shadow: 0 4px 8px rgba(9, 30, 66, 0.15);
+}
+
+.tab-btn-inactive {
+  color: #505f79;
+}
+
+.tab-btn-inactive:hover {
+  background: rgba(9, 30, 66, 0.04);
+  color: #091e42;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f4f5f7;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c7d0;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a5adba;
+}
