@@ -1,44 +1,37 @@
 class ApiError extends Error {
-    statusCode: number;
+  statusCode: number;
 
-    code: string;
+  code: string;
 
-    errors: any[];
+  errors: any[];
 
-    isOperational: boolean;
+  isOperational: boolean;
 
-    constructor(
-        statusCode: number,
+  constructor(
+    statusCode: number,
 
-        message: string,
+    message: string,
 
-        options?: {
-            code?: string;
+    options?: {
+      code?: string;
 
-            errors?: any[];
+      errors?: any[];
 
-            isOperational?: boolean;
-        } 
-    ) {
-        super(message);
+      isOperational?: boolean;
+    },
+  ) {
+    super(message);
 
-        this.statusCode = statusCode;
+    this.statusCode = statusCode;
 
-        this.code =
-            options?.code ||
-            "INTERNAL_SERVER_ERROR";
+    this.code = options?.code || "INTERNAL_SERVER_ERROR";
 
-        this.errors =
-            options?.errors || [];
+    this.errors = options?.errors || [];
 
-        this.isOperational =
-            options?.isOperational ?? true;
+    this.isOperational = options?.isOperational ?? true;
 
-        Error.captureStackTrace(
-            this,
-            this.constructor
-        );
-    }
+    Error.captureStackTrace(this, this.constructor);
+  }
 }
 
 export default ApiError;
