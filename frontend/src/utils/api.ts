@@ -24,7 +24,17 @@ export async function request<T = any>(
   }
 
   const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  const json = await response.json();
+  const text = await response.text();
+
+  let json: any;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch {
+    if (!response.ok) {
+      throw new Error(`Server returned error (${response.status}): ${response.statusText || 'Invalid response'}`);
+    }
+    throw new Error('Invalid JSON format returned from server');
+  }
 
   if (!response.ok) {
     throw new Error(json.message || `Request failed with status ${response.status}`);
