@@ -1,23 +1,27 @@
 import { useState } from 'react';
-import { useUIStore } from '../store/useUIStore';
-import { useAuthStore } from '../store/useAuthStore';
+import { useUIStore, useAuthStore, useTranslation } from '../store';
+import LanguageSelector from './LanguageSelector';
 import { X, Lock, Phone, User, Building, MapPin, Settings2, ShieldCheck, RotateCcw, ChevronLeft } from 'lucide-react';
 import OtpInput from './OtpInput';
 
 export default function AuthModal() {
-  const { authModalOpen, authModalMode, setAuthModal, setView } = useUIStore();
-  const {
-    login,
-    sendOtp,
-    confirmOtp,
-    register,
-    registrationProgress,
-    tempMobile,
-    isLoading,
-    error,
-    clearError,
-    resetToPhoneStep,
-  } = useAuthStore();
+  const authModalOpen = useUIStore((state) => state.authModalOpen);
+  const authModalMode = useUIStore((state) => state.authModalMode);
+  const setAuthModal = useUIStore((state) => state.setAuthModal);
+  const setView = useUIStore((state) => state.setView);
+  const { t } = useTranslation();
+
+  const login = useAuthStore((state) => state.login);
+  const sendOtp = useAuthStore((state) => state.sendOtp);
+  const confirmOtp = useAuthStore((state) => state.confirmOtp);
+  const register = useAuthStore((state) => state.register);
+  const registrationProgress = useAuthStore((state) => state.registrationProgress);
+  const tempMobile = useAuthStore((state) => state.tempMobile);
+  const authStatus = useAuthStore((state) => state.status);
+  const isLoading = authStatus === 'loading';
+  const error = useAuthStore((state) => state.error);
+  const clearError = useAuthStore((state) => state.clearError);
+  const resetToPhoneStep = useAuthStore((state) => state.resetToPhoneStep);
 
   // ── Login ──────────────────────────────────────────────────────────────
   const [loginMobile, setLoginMobile] = useState('');
@@ -120,9 +124,9 @@ export default function AuthModal() {
   // ── Step indicators ───────────────────────────────────────────────────
 
   const steps = [
-    { label: 'Phone', key: 'phone' },
-    { label: 'OTP', key: 'otp' },
-    { label: 'Details', key: 'details' },
+    { label: t('auth', 'stepPhone'), key: 'phone' },
+    { label: t('auth', 'stepOtp'), key: 'otp' },
+    { label: t('auth', 'stepDetails'), key: 'details' },
   ];
   const stepIndex = steps.findIndex((s) => s.key === registrationProgress);
 
@@ -135,19 +139,22 @@ export default function AuthModal() {
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg bg-white border border-[#dfe1e6] rounded-2xl shadow-2xl overflow-hidden z-10">
+      <div className="relative w-full max-w-lg bg-white border border-[#dfe1e6] rounded-2xl shadow-2xl overflow-hidden z-10 max-h-[90vh] overflow-y-auto mx-4">
 
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-[#dfe1e6] bg-[#f4f5f7]">
           <h3 className="text-sm font-bold text-[#091e42] font-display">
-            {authModalMode === 'login' ? 'Sign In to LactoFlow' : 'Create Owner Account'}
+            {authModalMode === 'login' ? t('auth', 'signInTitle') : t('auth', 'registerTitle')}
           </h3>
-          <button
-            onClick={handleClose}
-            className="p-1 rounded-lg border border-[#dfe1e6] text-gray-500 hover:text-black transition cursor-pointer font-bold"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-3">
+            <LanguageSelector variant="minimal" />
+            <button
+              onClick={handleClose}
+              className="p-1 rounded-lg border border-[#dfe1e6] text-gray-500 hover:text-black transition cursor-pointer font-bold"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Error Box */}
@@ -165,7 +172,7 @@ export default function AuthModal() {
           <form onSubmit={handleLoginSubmit} className="p-6 space-y-4 text-xs">
             <div>
               <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Mobile Number
+                {t('auth', 'mobileNumber')}
               </label>
               <div className="relative mt-1">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold select-none">+91</span>
@@ -181,7 +188,7 @@ export default function AuthModal() {
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Password</label>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">{t('auth', 'password')}</label>
               <div className="relative mt-1">
                 <input
                   type="password"
@@ -202,17 +209,17 @@ export default function AuthModal() {
             >
               {isLoading ? (
                 <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-              ) : 'Log In'}
+              ) : t('auth', 'logIn')}
             </button>
 
             <div className="text-center pt-2 text-xs text-gray-500 font-semibold">
-              Don't have an account?{' '}
+              {t('auth', 'dontHaveAccount')}{' '}
               <button
                 type="button"
                 onClick={() => { clearError(); setAuthModal(true, 'register'); }}
                 className="text-[#0052cc] font-bold hover:underline bg-transparent border-0 cursor-pointer"
               >
-                Sign Up
+                {t('auth', 'signUp')}
               </button>
             </div>
           </form>
@@ -261,7 +268,7 @@ export default function AuthModal() {
             {registrationProgress === 'phone' && (
               <form onSubmit={handleSendOtp} className="space-y-4 text-xs">
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Owner's Full Name</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">{t('auth', 'ownerFullName')}</label>
                   <div className="relative mt-1">
                     <input
                       type="text"
@@ -276,7 +283,7 @@ export default function AuthModal() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Mobile Number</label>
+                  <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">{t('auth', 'mobileNumber')}</label>
                   <div className="relative mt-1">
                     <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs font-semibold select-none">+91</span>
                     <input
@@ -300,7 +307,7 @@ export default function AuthModal() {
                   ) : (
                     <>
                       <Phone className="w-3.5 h-3.5" />
-                      Send OTP
+                      {t('auth', 'sendOtp')}
                     </>
                   )}
                 </button>
@@ -314,9 +321,9 @@ export default function AuthModal() {
                   <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[#deebff] mb-2">
                     <ShieldCheck className="w-6 h-6 text-[#0052cc]" />
                   </div>
-                  <p className="text-[#091e42] font-bold text-sm">Enter the OTP</p>
+                  <p className="text-[#091e42] font-bold text-sm">{t('auth', 'enterOtp')}</p>
                   <p className="text-gray-500 text-xs">
-                    A 6-digit code was sent to{' '}
+                    {t('auth', 'otpSentTo')}{' '}
                     <span className="font-bold text-[#091e42]">{tempMobile}</span>
                   </p>
                 </div>
@@ -333,7 +340,7 @@ export default function AuthModal() {
                   ) : (
                     <>
                       <ShieldCheck className="w-3.5 h-3.5" />
-                      Verify OTP
+                      {t('auth', 'verifyOtp')}
                     </>
                   )}
                 </button>
@@ -345,7 +352,7 @@ export default function AuthModal() {
                     className="flex items-center gap-1 text-gray-500 hover:text-[#0052cc] font-semibold bg-transparent border-0 cursor-pointer transition"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
-                    Change number
+                    {t('auth', 'changeNumber')}
                   </button>
                   <button
                     type="button"
@@ -354,7 +361,7 @@ export default function AuthModal() {
                     className="flex items-center gap-1 text-gray-500 hover:text-[#0052cc] font-semibold bg-transparent border-0 cursor-pointer disabled:opacity-50 transition"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    Resend OTP
+                    {t('auth', 'resendOtp')}
                   </button>
                 </div>
               </form>
@@ -366,7 +373,7 @@ export default function AuthModal() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Dairy Name</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">{t('auth', 'dairyName')}</label>
                     <div className="relative mt-1">
                       <input
                         type="text"
@@ -381,7 +388,7 @@ export default function AuthModal() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">Password (Min 8 chars)</label>
+                    <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider">{t('auth', 'passwordMin')}</label>
                     <div className="relative mt-1">
                       <input
                         type="password"
@@ -400,14 +407,14 @@ export default function AuthModal() {
                 {/* Location */}
                 <div className="bg-gray-50 p-3 border border-gray-200 rounded-xl space-y-3">
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-[#0052cc]" /> Location Info
+                    <MapPin className="w-3 h-3 text-[#0052cc]" /> {t('auth', 'locationInfo')}
                   </span>
                   <div className="grid grid-cols-2 gap-3">
                     {[
-                      { label: 'Village', val: regVillage, set: setRegVillage, placeholder: 'Village' },
-                      { label: 'Taluka', val: regTaluka, set: setRegTaluka, placeholder: 'Taluka' },
-                      { label: 'District', val: regDistrict, set: setRegDistrict, placeholder: 'District' },
-                      { label: 'State', val: regState, set: setRegState, placeholder: 'State' },
+                      { label: t('auth', 'village'), val: regVillage, set: setRegVillage, placeholder: t('auth', 'village') },
+                      { label: t('auth', 'taluka'), val: regTaluka, set: setRegTaluka, placeholder: t('auth', 'taluka') },
+                      { label: t('auth', 'district'), val: regDistrict, set: setRegDistrict, placeholder: t('auth', 'district') },
+                      { label: t('auth', 'state'), val: regState, set: setRegState, placeholder: t('auth', 'state') },
                     ].map(({ label, val, set: setter, placeholder }) => (
                       <div key={label}>
                         <label className="block text-[10px] text-gray-500 font-bold">{label}</label>
@@ -427,56 +434,56 @@ export default function AuthModal() {
                 {/* Dairy Configurations */}
                 <div className="bg-gray-50 p-3 border border-gray-200 rounded-xl space-y-3">
                   <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">
-                    <Settings2 className="w-3 h-3 text-[#0052cc]" /> Dairy System Configurations
+                    <Settings2 className="w-3 h-3 text-[#0052cc]" /> {t('auth', 'dairyConfig')}
                   </span>
                   <div className="grid grid-cols-2 gap-3 text-xs">
                     <div>
-                      <label className="block text-[10px] text-gray-500 font-bold">Pricing Model</label>
+                      <label className="block text-[10px] text-gray-500 font-bold">{t('auth', 'pricingModel')}</label>
                       <select
                         value={regCollectionType}
                         onChange={(e) => setRegCollectionType(e.target.value as typeof regCollectionType)}
                         className="mt-1 w-full light-input rounded-lg py-1.5 px-2 font-semibold"
                       >
-                        <option value="FAT_SNF_BASED">FAT &amp; SNF Based</option>
-                        <option value="FAT_BASED">FAT Based Only</option>
-                        <option value="FIXED_RATE">Fixed Rate (Flat Price)</option>
+                        <option value="FAT_SNF_BASED">{t('auth', 'fatSnfBased')}</option>
+                        <option value="FAT_BASED">{t('auth', 'fatBasedOnly')}</option>
+                        <option value="FIXED_RATE">{t('auth', 'fixedRate')}</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] text-gray-500 font-bold">Supported Milk</label>
+                      <label className="block text-[10px] text-gray-500 font-bold">{t('auth', 'supportedMilk')}</label>
                       <select
                         value={regMilkType}
                         onChange={(e) => setRegMilkType(e.target.value as typeof regMilkType)}
                         className="mt-1 w-full light-input rounded-lg py-1.5 px-2 font-semibold"
                       >
-                        <option value="COW">Cow Milk Only</option>
-                        <option value="BUFFALO">Buffalo Milk Only</option>
-                        <option value="MIX">Mixed (Both supported)</option>
+                        <option value="COW">{t('auth', 'cowOnly')}</option>
+                        <option value="BUFFALO">{t('auth', 'buffaloOnly')}</option>
+                        <option value="MIX">{t('auth', 'mixBoth')}</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] text-gray-500 font-bold">Collection Shifts</label>
+                      <label className="block text-[10px] text-gray-500 font-bold">{t('auth', 'collectionShift')}</label>
                       <select
                         value={regCollectionShift}
                         onChange={(e) => setRegCollectionShift(e.target.value as typeof regCollectionShift)}
                         className="mt-1 w-full light-input rounded-lg py-1.5 px-2 font-semibold"
                       >
-                        <option value="BOTH">Both Shifts</option>
-                        <option value="MORNING">Morning Only</option>
-                        <option value="EVENING">Evening Only</option>
+                        <option value="BOTH">{t('auth', 'bothShifts')}</option>
+                        <option value="MORNING">{t('auth', 'morningOnly')}</option>
+                        <option value="EVENING">{t('auth', 'eveningOnly')}</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] text-gray-500 font-bold">Settlement Cycle</label>
+                      <label className="block text-[10px] text-gray-500 font-bold">{t('auth', 'settlementCycle')}</label>
                       <select
                         value={regPaymentPeriod}
                         onChange={(e) => setRegPaymentPeriod(e.target.value as typeof regPaymentPeriod)}
                         className="mt-1 w-full light-input rounded-lg py-1.5 px-2 font-semibold"
                       >
-                        <option value="WEEKLY">Weekly Cycle</option>
-                        <option value="BIWEEKLY">Bi-weekly (15 days)</option>
-                        <option value="MONTHLY">Monthly Cycle</option>
-                        <option value="DAILY">Daily Cash Settlement</option>
+                        <option value="WEEKLY">{t('auth', 'weeklyCycle')}</option>
+                        <option value="BIWEEKLY">{t('auth', 'biweeklyCycle')}</option>
+                        <option value="MONTHLY">{t('auth', 'monthlyCycle')}</option>
+                        <option value="DAILY">{t('auth', 'dailyCycle')}</option>
                       </select>
                     </div>
                   </div>
@@ -489,20 +496,20 @@ export default function AuthModal() {
                 >
                   {isLoading ? (
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                  ) : 'Complete Registration'}
+                  ) : t('auth', 'completeRegistration')}
                 </button>
               </form>
             )}
 
             {/* Switch to login */}
             <div className="text-center pt-3 text-xs text-gray-500 border-t border-gray-200 mt-4 font-semibold">
-              Already have an account?{' '}
+              {t('auth', 'alreadyHaveAccount')}{' '}
               <button
                 type="button"
                 onClick={() => { clearError(); setAuthModal(true, 'login'); }}
                 className="text-[#0052cc] font-bold hover:underline bg-transparent border-0 cursor-pointer"
               >
-                Log In
+                {t('auth', 'logIn')}
               </button>
             </div>
 

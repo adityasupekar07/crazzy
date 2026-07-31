@@ -1,11 +1,17 @@
 import { useState, useEffect } from 'react';
-import { useUIStore } from '../store/useUIStore';
-import { useAuthStore } from '../store/useAuthStore';
-import { useAdminStore } from '../store/useAdminStore';
-import { useFarmerStore } from '../store/useFarmerStore';
-import { useRateChartStore } from '../store/useRateChartStore';
-import { useMilkStore } from '../store/useMilkStore';
-import { useFeedStore } from '../store/useFeedStore';
+import {
+  useUIStore,
+  useAuthStore,
+  useDashboardStore,
+  useFarmerStore,
+  useRateChartStore,
+  useMilkStore,
+  useFeedStore,
+  useAdvanceStore,
+  useTranslation,
+} from '../store';
+import type { Advance } from '../store';
+import LanguageSelector from './LanguageSelector';
 import {
   Milk,
   Users,
@@ -13,28 +19,73 @@ import {
   ShoppingBag,
   Coins,
   LayoutDashboard,
-  Home,
   LogOut,
-  Search,
+  Home,
+  Plus,
   Trash2,
   AlertTriangle,
   CheckCircle,
   DollarSign,
   UserPlus,
   Info,
-  RefreshCw,
+  HandCoins,
+  History as HistoryIcon,
+  Menu,
+  X,
+  Search,
 } from 'lucide-react';
 
 export default function Dashboard() {
-  const { setView } = useUIStore();
-  const { user, token, logout } = useAuthStore();
-  const { dashboardStats, fetchDashboard, error: adminError } = useAdminStore();
-  const { farmers, fetchFarmers, addFarmer, error: farmerError } = useFarmerStore();
-  const { rateCharts, fetchRateCharts, calculateRate, deleteRateChart, error: rateError } = useRateChartStore();
-  const { collections, fetchCollections, addCollectionEntry, deleteCollectionEntry, error: milkError } = useMilkStore();
-  const { dealers, purchases, sales, fetchDealers, fetchPurchases, fetchSales, addDealer, recordPurchase, recordSale, error: feedError } = useFeedStore();
+  const setView = useUIStore((state) => state.setView);
+  const user = useAuthStore((state) => state.user);
+  const token = useAuthStore((state) => state.token);
+  const logout = useAuthStore((state) => state.logout);
+  const { t } = useTranslation();
 
-  const fetchError = adminError || farmerError || rateError || milkError || feedError;
+  const dashboardStats = useDashboardStore((state) => state.dashboardStats);
+  const fetchDashboard = useDashboardStore((state) => state.fetchDashboard);
+  const adminError = useDashboardStore((state) => state.error);
+
+  const farmers = useFarmerStore((state) => state.farmers);
+  const fetchFarmers = useFarmerStore((state) => state.fetchFarmers);
+  const addFarmer = useFarmerStore((state) => state.createFarmer);
+  const farmerError = useFarmerStore((state) => state.error);
+
+  const rateCharts = useRateChartStore((state) => state.rateCharts);
+  const fetchRateCharts = useRateChartStore((state) => state.fetchRateCharts);
+  const calculateRate = useRateChartStore((state) => state.calculateRate);
+  const deleteRateChart = useRateChartStore((state) => state.deleteRateChart);
+  const rateError = useRateChartStore((state) => state.error);
+
+  const collections = useMilkStore((state) => state.collections);
+  const fetchCollections = useMilkStore((state) => state.fetchCollections);
+  const addCollectionEntry = useMilkStore((state) => state.createCollectionEntry);
+  const deleteCollectionEntry = useMilkStore((state) => state.deleteCollectionEntry);
+  const milkError = useMilkStore((state) => state.error);
+
+  const dealers = useFeedStore((state) => state.dealers);
+  const purchases = useFeedStore((state) => state.purchases);
+  const sales = useFeedStore((state) => state.sales);
+  const fetchDealers = useFeedStore((state) => state.fetchDealers);
+  const fetchPurchases = useFeedStore((state) => state.fetchPurchases);
+  const fetchSales = useFeedStore((state) => state.fetchSales);
+  const addDealer = useFeedStore((state) => state.createDealer);
+  const recordPurchase = useFeedStore((state) => state.createPurchase);
+  const recordSale = useFeedStore((state) => state.createSale);
+  const feedError = useFeedStore((state) => state.error);
+
+  const advances = useAdvanceStore((state) => state.advances);
+  const fetchAdvances = useAdvanceStore((state) => state.fetchAdvances);
+  const createAdvance = useAdvanceStore((state) => state.createAdvance);
+  const addRepayment = useAdvanceStore((state) => state.createRepayment);
+  const advStatus = useAdvanceStore((state) => state.status);
+  const advLoading = advStatus === 'loading';
+  const advError = useAdvanceStore((state) => state.error);
+
+  const fetchError = adminError || farmerError || rateError || milkError || feedError || advError;
+
+  // Responsive sidebar drawer state
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Load all data from backend when component mounts or token changes
   useEffect(() => {
@@ -42,10 +93,12 @@ export default function Dashboard() {
       fetchDashboard();
       fetchFarmers();
       fetchRateCharts();
+
       fetchCollections();
       fetchDealers();
       fetchPurchases();
       fetchSales();
+      fetchAdvances();
     }
   }, [token]);
 
@@ -57,18 +110,25 @@ export default function Dashboard() {
   }, [token]);
 
   // Internal routing in Dashboard
-  const [dbTab, setDbTab] = useState<'overview' | 'milk' | 'farmers' | 'rates' | 'feed' | 'billing'>('overview');
+  const [dbTab, setDbTab] = useState<'overview' | 'milk' | 'farmers' | 'rates' | 'feed' | 'billing' | 'advances'>('overview');
 
   // Modal control states
   const [farmerModalOpen, setFarmerModalOpen] = useState(false);
   const [dealerModalOpen, setDealerModalOpen] = useState(false);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+  const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
+  const [repaymentModalOpen, setRepaymentModalOpen] = useState(false);
+  const [historyModalOpen, setHistoryModalOpen] = useState(false);
+  const [selectedAdvance, setSelectedAdvance] = useState<Advance | null>(null);
 
   // 1. ADD FARMER FORM STATE
+  const [fCode, setFCode] = useState('');
   const [fName, setFName] = useState('');
   const [fMobile, setFMobile] = useState('');
   const [fAddress, setFAddress] = useState('');
   const [fMilkType, setFMilkType] = useState<'COW' | 'BUFFALO' | 'MIX'>('COW');
+  const [farmerSuccessMsg, setFarmerSuccessMsg] = useState('');
+  const [farmerErrorMsg, setFarmerErrorMsg] = useState('');
 
   // 2. ADD DEALER STATE
   const [dName, setDName] = useState('');
@@ -111,10 +171,34 @@ export default function Dashboard() {
   const [billingEndDate, setBillingEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [settledBills, setSettledBills] = useState<any[]>([]);
 
+  // 7. ADVANCE FORM & FILTER STATES
+  const [advSearchQuery, setAdvSearchQuery] = useState('');
+  const [advStatusFilter, setAdvStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PARTIALLY_RECOVERED' | 'CLOSED'>('ALL');
+  const [advCustomerId, setAdvCustomerId] = useState('');
+  const [advAmount, setAdvAmount] = useState('');
+  const [advDate, setAdvDate] = useState(new Date().toISOString().split('T')[0]);
+  const [advNotes, setAdvNotes] = useState('');
+
+  const [repayAmount, setRepayAmount] = useState('');
+  const [repayNotes, setRepayNotes] = useState('');
+
   // Search farmers filter
   const [searchQuery, setSearchQuery] = useState('');
 
   // ── Derived state ──────────────────────────────────────────────────────────
+
+  const filteredAdvances = advances.filter(a => {
+    const matchesSearch = !advSearchQuery ||
+      a.advanceNumber.toLowerCase().includes(advSearchQuery.toLowerCase()) ||
+      a.customer?.name.toLowerCase().includes(advSearchQuery.toLowerCase()) ||
+      a.customer?.mobile.includes(advSearchQuery);
+    const matchesStatus = advStatusFilter === 'ALL' || a.status === advStatusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  const totalAdvanceIssued = advances.reduce((sum, a) => sum + Number(a.originalAmount), 0);
+  const totalRecoveredAmt = advances.reduce((sum, a) => sum + Number(a.recoveredAmount), 0);
+  const totalPendingBal = advances.reduce((sum, a) => sum + Number(a.pendingAmount), 0);
 
   const foundFarmer = farmers.find(f => f.code === Number(selectedFarmerCode));
   const liveRateInfo = foundFarmer
@@ -153,16 +237,77 @@ export default function Dashboard() {
     f.mobile.includes(searchQuery)
   );
 
+  const navItems = [
+    { id: 'overview', label: t('dashboard', 'navOverview'), icon: LayoutDashboard },
+    { id: 'milk', label: t('dashboard', 'navMilkRegistry'), icon: Milk },
+    { id: 'farmers', label: t('dashboard', 'navFarmers'), icon: Users },
+    { id: 'rates', label: t('dashboard', 'navRates'), icon: FileSpreadsheet },
+    { id: 'feed', label: t('dashboard', 'navFeeds'), icon: ShoppingBag },
+    { id: 'advances', label: t('dashboard', 'navAdvances'), icon: HandCoins },
+    { id: 'billing', label: t('dashboard', 'navBilling'), icon: Coins },
+  ];
+
   // ── Handlers ───────────────────────────────────────────────────────────────
 
   const handleAddFarmerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fName || !fMobile) { alert('Name and Mobile are required'); return; }
-    const success = await addFarmer({ name: fName, mobile: fMobile, address: fAddress, milkType: fMilkType });
-    if (success) {
+    setFarmerErrorMsg('');
+    setFarmerSuccessMsg('');
+
+    const trimmedCode = fCode.trim();
+    const trimmedName = fName.trim();
+    const trimmedMobile = fMobile.replace(/\D/g, '');
+
+    if (!trimmedCode) {
+      setFarmerErrorMsg(t('customer', 'codeRequired'));
+      return;
+    }
+    if (trimmedCode.length < 1 || trimmedCode.length > 20) {
+      setFarmerErrorMsg(t('customer', 'codeMin'));
+      return;
+    }
+
+    // 1. Check if farmer code already exists in local Zustand store BEFORE calling backend API
+    const codeNum = parseInt(trimmedCode, 10);
+    const codeExists = farmers.some(
+      (f) => String(f.code) === trimmedCode || (!isNaN(codeNum) && f.code === codeNum)
+    );
+
+    if (codeExists) {
+      setFarmerErrorMsg(t('customer', 'duplicateCodeToast'));
+      return;
+    }
+
+    if (!trimmedName) {
+      setFarmerErrorMsg(t('customer', 'nameRequired'));
+      return;
+    }
+
+    // 2. Mobile field MUST always have exactly 10 digits
+    if (!trimmedMobile || trimmedMobile.length !== 10) {
+      setFarmerErrorMsg(t('customer', 'mobileInvalid'));
+      return;
+    }
+
+    const res = await addFarmer({
+      customerCode: trimmedCode,
+      fullName: trimmedName,
+      mobile: trimmedMobile,
+      address: fAddress.trim(),
+      milkType: fMilkType,
+    });
+
+    if (res.success) {
       setFarmerModalOpen(false);
-      setFName(''); setFMobile(''); setFAddress('');
+      setFCode(''); setFName(''); setFMobile(''); setFAddress('');
+      setFarmerSuccessMsg(t('customer', 'successToast'));
       fetchDashboard();
+    } else {
+      if (res.error?.toLowerCase().includes('already exists') || res.error?.toLowerCase().includes('code')) {
+        setFarmerErrorMsg(t('customer', 'duplicateCodeToast'));
+      } else {
+        setFarmerErrorMsg(res.error || t('customer', 'errorToast'));
+      }
     }
   };
 
@@ -198,9 +343,24 @@ export default function Dashboard() {
     e.preventDefault();
     setMilkSuccessMsg('');
     setMilkErrorMsg('');
-    if (!foundFarmer) { setMilkErrorMsg('Please select a valid farmer'); return; }
+    if (!foundFarmer) { setMilkErrorMsg(t('dashboard', 'selectFarmer')); return; }
+
     const qty = Number(milkQty);
-    if (isNaN(qty) || qty <= 0) { setMilkErrorMsg('Enter a valid milk quantity in Litres'); return; }
+    const fat = Number(milkFat);
+    const snf = Number(milkSnf);
+
+    if (isNaN(qty) || qty <= 0) {
+      setMilkErrorMsg(t('dashboard', 'invalidPositiveQty'));
+      return;
+    }
+    if (isNaN(fat) || fat < 0) {
+      setMilkErrorMsg(t('dashboard', 'invalidPositiveFat'));
+      return;
+    }
+    if (isNaN(snf) || snf < 0) {
+      setMilkErrorMsg(t('dashboard', 'invalidPositiveSnf'));
+      return;
+    }
 
     const success = await addCollectionEntry({
       customerCode: foundFarmer.code,
@@ -208,8 +368,8 @@ export default function Dashboard() {
       customerId: foundFarmer.id,
       milkType: foundFarmer.milkType,
       quantity: qty,
-      fat: Number(milkFat) || 0,
-      snf: Number(milkSnf) || 0,
+      fat: fat || 0,
+      snf: snf || 0,
       shift: milkShift,
     });
 
@@ -267,11 +427,54 @@ export default function Dashboard() {
     setBillingFarmerId('');
   };
 
-  return (
-    <div className="min-h-screen bg-[#fafbfc] flex text-[#091e42]">
+  const handleCreateAdvanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!advCustomerId || !advAmount || Number(advAmount) <= 0) {
+      alert('Please select a farmer and enter a valid positive amount.');
+      return;
+    }
+    const success = await createAdvance({
+      customerId: advCustomerId,
+      amount: Number(advAmount),
+      givenDate: advDate,
+      notes: advNotes,
+    });
+    if (success) {
+      setAdvanceModalOpen(false);
+      setAdvCustomerId(''); setAdvAmount(''); setAdvNotes('');
+      fetchFarmers();
+    }
+  };
 
-      {/* ── SIDEBAR ── */}
-      <aside className="w-64 bg-[#091e42] flex flex-col justify-between p-4 shrink-0 text-white shadow-xl">
+  const handleRepaymentSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedAdvance) return;
+    const amountNum = Number(repayAmount);
+    if (!amountNum || amountNum <= 0) {
+      alert('Please enter a valid repayment amount.');
+      return;
+    }
+    if (amountNum > selectedAdvance.pendingAmount) {
+      alert(`Repayment amount cannot exceed pending balance of ₹${selectedAdvance.pendingAmount.toFixed(2)}`);
+      return;
+    }
+    const success = await addRepayment(selectedAdvance.id, {
+      amount: amountNum,
+      notes: repayNotes,
+    });
+    if (success) {
+      setRepaymentModalOpen(false);
+      setSelectedAdvance(null);
+      setRepayAmount(''); setRepayNotes('');
+      fetchFarmers();
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#fafbfc] flex text-[#091e42] relative">
+
+      {/* ── DESKTOP SIDEBAR ── */}
+      <aside className="hidden lg:flex w-64 bg-[#091e42] flex-col justify-between p-4 shrink-0 text-white shadow-xl">
         <div className="space-y-6">
           {/* Brand */}
           <div className="flex items-center gap-2 font-display text-lg font-bold px-2 py-2">
@@ -283,30 +486,22 @@ export default function Dashboard() {
 
           {/* Dairy info */}
           <div className="bg-[#172b4d] rounded-xl p-3 border border-blue-900/30">
-            <span className="text-[10px] text-blue-300 font-bold block uppercase tracking-wider">Active Dairy Hub</span>
+            <span className="text-[10px] text-blue-300 font-bold block uppercase tracking-wider">{t('dashboard', 'activeDairyHub')}</span>
             <span className="text-sm font-bold block mt-0.5">{user?.dairyName || '—'}</span>
             <span className="text-xs text-blue-200 block">{user?.village || '—'}, {user?.district || '—'}</span>
           </div>
 
           {/* Nav */}
           <nav className="space-y-1">
-            {[
-              { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
-              { id: 'milk', label: 'Milk Entry Registry', icon: Milk },
-              { id: 'farmers', label: 'Farmer Accounts', icon: Users },
-              { id: 'rates', label: 'Rate Slab Sheets', icon: FileSpreadsheet },
-              { id: 'feed', label: 'Feeds & Sales', icon: ShoppingBag },
-              { id: 'billing', label: 'Settle Billing', icon: Coins },
-            ].map((item) => {
+            {navItems.map((item) => {
               const Icon = item.icon;
               const isActive = dbTab === item.id;
               return (
                 <button
                   key={item.id}
                   onClick={() => setDbTab(item.id as any)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition cursor-pointer ${
-                    isActive ? 'bg-[#0052cc] text-white shadow-md' : 'text-blue-100 hover:text-white hover:bg-[#172b4d]'
-                  }`}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition cursor-pointer ${isActive ? 'bg-[#0052cc] text-white shadow-md' : 'text-blue-100 hover:text-white hover:bg-[#172b4d]'
+                    }`}
                 >
                   <Icon className="w-4 h-4" /> {item.label}
                 </button>
@@ -317,43 +512,107 @@ export default function Dashboard() {
 
         {/* Footer */}
         <div className="space-y-2 pt-4 border-t border-[#172b4d]">
-          <button onClick={() => setView('landing')} className="w-full flex items-center gap-3 px-3 py-2 text-xs text-blue-200 hover:text-white rounded-lg transition">
-            <Home className="w-4 h-4" /> Landing View
+          <button onClick={() => setView('landing')} className="w-full flex items-center gap-3 px-3 py-2 text-xs text-blue-200 hover:text-white rounded-lg transition cursor-pointer">
+            <Home className="w-4 h-4" /> {t('dashboard', 'landingView')}
           </button>
-          <button onClick={() => { logout(); setView('landing'); }} className="w-full flex items-center gap-3 px-3 py-2 text-xs text-red-300 hover:text-red-100 hover:bg-red-950/20 rounded-lg transition">
-            <LogOut className="w-4 h-4" /> Log Out
+          <button onClick={() => { logout(); setView('landing'); }} className="w-full flex items-center gap-3 px-3 py-2 text-xs text-red-300 hover:text-red-100 hover:bg-red-950/20 rounded-lg transition cursor-pointer">
+            <LogOut className="w-4 h-4" /> {t('dashboard', 'logOut')}
           </button>
         </div>
       </aside>
 
+      {/* ── MOBILE SIDEBAR DRAWER ── */}
+      {isSidebarOpen && (
+        <div className="fixed inset-0 z-50 lg:hidden flex">
+          <div className="fixed inset-0 bg-[#091e42]/70 backdrop-blur-sm" onClick={() => setIsSidebarOpen(false)} />
+          <aside className="relative w-72 bg-[#091e42] flex-col justify-between p-5 text-white shadow-2xl z-10 flex">
+            <div className="space-y-6">
+              <div className="flex items-center justify-between pb-3 border-b border-[#172b4d]">
+                <div className="flex items-center gap-2 font-display text-lg font-bold">
+                  <div className="w-8 h-8 rounded-lg bg-blue-500 flex items-center justify-center shadow-md">
+                    <Milk className="w-4 h-4 text-white" />
+                  </div>
+                  <span>Lacto<span className="text-blue-300">Flow</span></span>
+                </div>
+                <button onClick={() => setIsSidebarOpen(false)} className="p-1 rounded-lg text-gray-400 hover:text-white cursor-pointer">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Dairy info */}
+              <div className="bg-[#172b4d] rounded-xl p-3 border border-blue-900/30">
+                <span className="text-[10px] text-blue-300 font-bold block uppercase tracking-wider">{t('dashboard', 'activeDairyHub')}</span>
+                <span className="text-sm font-bold block mt-0.5">{user?.dairyName || '—'}</span>
+                <span className="text-xs text-blue-200 block">{user?.village || '—'}, {user?.district || '—'}</span>
+              </div>
+
+              {/* Nav */}
+              <nav className="space-y-1">
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = dbTab === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      onClick={() => {
+                        setDbTab(item.id as any);
+                        setIsSidebarOpen(false);
+                      }}
+                      className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-lg text-xs font-semibold tracking-wide transition cursor-pointer ${isActive ? 'bg-[#0052cc] text-white shadow-md' : 'text-blue-100 hover:text-white hover:bg-[#172b4d]'
+                        }`}
+                    >
+                      <Icon className="w-4 h-4" /> {item.label}
+                    </button>
+                  );
+                })}
+              </nav>
+            </div>
+
+            {/* Footer */}
+            <div className="space-y-2 pt-4 border-t border-[#172b4d]">
+              <button onClick={() => { setIsSidebarOpen(false); setView('landing'); }} className="w-full flex items-center gap-3 px-3 py-2 text-xs text-blue-200 hover:text-white rounded-lg transition cursor-pointer">
+                <Home className="w-4 h-4" /> {t('dashboard', 'landingView')}
+              </button>
+              <button onClick={() => { setIsSidebarOpen(false); logout(); setView('landing'); }} className="w-full flex items-center gap-3 px-3 py-2 text-xs text-red-300 hover:text-red-100 hover:bg-red-950/20 rounded-lg transition cursor-pointer">
+                <LogOut className="w-4 h-4" /> {t('dashboard', 'logOut')}
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
       {/* ── MAIN CONTENT ── */}
-      <main className="flex-1 overflow-y-auto p-8">
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 lg:p-8">
 
         {/* TOP HEADER */}
-        <header className="flex justify-between items-center pb-6 border-b border-gray-200 mb-8">
-          <div>
-            <h2 className="text-2xl font-bold font-display text-[#091e42]">
-              {dbTab === 'overview' && 'System Analytics'}
-              {dbTab === 'milk' && 'Milk Collection Register'}
-              {dbTab === 'farmers' && 'Farmers Ledger Directory'}
-              {dbTab === 'rates' && 'Pricing Slabs Configuration'}
-              {dbTab === 'feed' && 'Cattle Feed Sales Inventory'}
-              {dbTab === 'billing' && 'Billing Settlement Hub'}
-            </h2>
-            <p className="text-xs text-gray-500 mt-1">
-              Logged in as <span className="font-semibold text-[#0052cc]">{user?.ownerName}</span> ({user?.mobile})
-            </p>
-          </div>
-          <div className="flex items-center gap-4">
+        <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-6 border-b border-gray-200 mb-6 sm:mb-8">
+          <div className="flex items-center gap-3">
             <button
-              onClick={() => { fetchDashboard(); fetchCollections(); fetchFarmers(); fetchRateCharts(); }}
-              className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-[#0052cc] font-semibold cursor-pointer"
-              title="Refresh all data"
+              onClick={() => setIsSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-[#091e42] transition cursor-pointer"
+              title="Open Navigation"
             >
-              <RefreshCw className="w-3.5 h-3.5" /> Refresh
+              <Menu className="w-5 h-5" />
             </button>
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold font-display text-[#091e42]">
+                {dbTab === 'overview' && t('dashboard', 'navOverview')}
+                {dbTab === 'milk' && t('dashboard', 'navMilkRegistry')}
+                {dbTab === 'farmers' && t('dashboard', 'navFarmers')}
+                {dbTab === 'rates' && t('dashboard', 'navRates')}
+                {dbTab === 'feed' && t('dashboard', 'navFeeds')}
+                {dbTab === 'advances' && t('dashboard', 'navAdvances')}
+                {dbTab === 'billing' && t('dashboard', 'navBilling')}
+              </h2>
+              <p className="text-xs text-gray-500 mt-0.5">
+                {t('dashboard', 'loggedInAs')} <span className="font-semibold text-[#0052cc]">{user?.ownerName}</span> ({user?.mobile})
+              </p>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto justify-between sm:justify-end">
+            <LanguageSelector variant="light" />
             <div className="text-right">
-              <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">Pricing Mode</span>
+              <span className="text-[10px] text-gray-400 font-bold block uppercase tracking-wider">{t('dashboard', 'pricingMode')}</span>
               <span className="text-xs font-bold text-[#0052cc] bg-[#deebff] px-2.5 py-1 rounded">
                 {user?.collectionType?.replace(/_/g, ' ') || '—'}
               </span>
@@ -387,9 +646,9 @@ export default function Dashboard() {
 
               <div className="light-panel p-5 rounded-xl flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">Liters Today</span>
+                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">{t('dashboard', 'litersToday')}</span>
                   <span className="text-2xl font-black text-[#091e42] mt-1 block">{todayLiters.toFixed(1)} L</span>
-                  <span className="text-[10px] text-gray-400">Live from database</span>
+                  <span className="text-[10px] text-gray-400">{t('dashboard', 'liveFromDb')}</span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-[#deebff] flex items-center justify-center text-[#0052cc]">
                   <Milk className="w-5 h-5" />
@@ -398,9 +657,9 @@ export default function Dashboard() {
 
               <div className="light-panel p-5 rounded-xl flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">Intake Value</span>
+                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">{t('dashboard', 'intakeValue')}</span>
                   <span className="text-2xl font-black text-[#091e42] mt-1 block">₹{todayValue.toFixed(2)}</span>
-                  <span className="text-[10px] text-gray-400">Live from database</span>
+                  <span className="text-[10px] text-gray-400">{t('dashboard', 'liveFromDb')}</span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
                   <DollarSign className="w-5 h-5" />
@@ -409,9 +668,9 @@ export default function Dashboard() {
 
               <div className="light-panel p-5 rounded-xl flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">Active Farmers</span>
+                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">{t('dashboard', 'activeFarmers')}</span>
                   <span className="text-2xl font-black text-[#091e42] mt-1 block">{totalCustomers}</span>
-                  <span className="text-[10px] text-gray-400">Live from database</span>
+                  <span className="text-[10px] text-gray-400">{t('dashboard', 'liveFromDb')}</span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-600">
                   <Users className="w-5 h-5" />
@@ -420,8 +679,8 @@ export default function Dashboard() {
 
               <div className="light-panel p-5 rounded-xl flex items-center justify-between">
                 <div>
-                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">Rate Charts</span>
-                  <span className="text-2xl font-black text-[#091e42] mt-1 block">{rateCharts.filter(r => r.isActive).length} Active</span>
+                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">{t('dashboard', 'rateChartsCount')}</span>
+                  <span className="text-2xl font-black text-[#091e42] mt-1 block">{rateCharts.filter(r => r.isActive).length} {t('dashboard', 'active')}</span>
                   <span className="text-[10px] text-gray-400">{rateCharts.length} total in DB</span>
                 </div>
                 <div className="w-10 h-10 rounded-xl bg-orange-50 flex items-center justify-center text-orange-600">
@@ -436,25 +695,25 @@ export default function Dashboard() {
 
               <div className="lg:col-span-8 light-panel rounded-xl p-6">
                 <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">
-                  Today's Milk Collections ({todayCollections.length})
+                  {t('dashboard', 'todaysMilkCollections')} ({todayCollections.length})
                 </h3>
 
                 {todayCollections.length === 0 ? (
                   <div className="text-center py-12 text-xs text-gray-400 bg-[#fafbfc] rounded-lg border border-dashed border-gray-300">
-                    No milk collected yet today. Go to the "Milk Entry Registry" tab to log records.
+                    {t('dashboard', 'noCollectionsToday')}
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
-                          <th className="py-2.5">Code</th>
-                          <th className="py-2.5">Name</th>
-                          <th className="py-2.5">Shift</th>
-                          <th className="py-2.5">Qty (L)</th>
-                          <th className="py-2.5">Fat/SNF</th>
-                          <th className="py-2.5 text-right">Rate</th>
-                          <th className="py-2.5 text-right">Total</th>
+                          <th className="py-2.5">{t('dashboard', 'code')}</th>
+                          <th className="py-2.5">{t('dashboard', 'name')}</th>
+                          <th className="py-2.5">{t('dashboard', 'shift')}</th>
+                          <th className="py-2.5">{t('dashboard', 'qtyL')}</th>
+                          <th className="py-2.5">{t('dashboard', 'fatSnf')}</th>
+                          <th className="py-2.5 text-right">{t('dashboard', 'rate')}</th>
+                          <th className="py-2.5 text-right">{t('dashboard', 'total')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-200 text-gray-700">
@@ -464,7 +723,7 @@ export default function Dashboard() {
                             <td className="py-2.5 font-semibold text-[#091e42]">{c.customerName}</td>
                             <td className="py-2.5">
                               <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${c.shift === 'MORNING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                                {c.shift}
+                                {c.shift === 'MORNING' ? t('dashboard', 'morning') : t('dashboard', 'evening')}
                               </span>
                             </td>
                             <td className="py-2.5 font-mono">{c.quantity}</td>
@@ -483,11 +742,11 @@ export default function Dashboard() {
               <div className="lg:col-span-4 space-y-6">
                 <div className="light-panel rounded-xl p-6">
                   <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">
-                    Cattle Feed Stock
+                    {t('dashboard', 'cattleFeedStock')}
                   </h3>
                   {purchases.length === 0 ? (
                     <div className="text-xs text-gray-400 text-center py-4 bg-[#fafbfc] rounded border">
-                      No feed stock recorded. Add a purchase in "Feeds & Sales".
+                      {t('dashboard', 'noStockRecorded')}
                     </div>
                   ) : (
                     <div className="space-y-4">
@@ -532,7 +791,7 @@ export default function Dashboard() {
             {/* Add Collection Form */}
             <div className="lg:col-span-4 light-panel rounded-xl p-6 self-start">
               <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">
-                Record Delivery Entry
+                {t('dashboard', 'recordDeliveryEntry')}
               </h3>
 
               {milkSuccessMsg && (
@@ -549,28 +808,28 @@ export default function Dashboard() {
               <form onSubmit={handleMilkEntrySubmit} className="space-y-4">
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600">Shift</label>
+                  <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'shift')}</label>
                   <div className="flex gap-2 mt-1">
                     <button type="button" onClick={() => setMilkShift('MORNING')}
                       className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${milkShift === 'MORNING' ? 'bg-[#091e42] text-white' : 'bg-gray-100 text-gray-600'}`}>
-                      Morning
+                      {t('dashboard', 'morning')}
                     </button>
                     <button type="button" onClick={() => setMilkShift('EVENING')}
                       className={`flex-1 py-2 rounded-lg text-xs font-bold transition cursor-pointer ${milkShift === 'EVENING' ? 'bg-[#091e42] text-white' : 'bg-gray-100 text-gray-600'}`}>
-                      Evening
+                      {t('dashboard', 'evening')}
                     </button>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600">Farmer</label>
+                  <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'farmerLabel')}</label>
                   <select
                     value={selectedFarmerCode}
                     onChange={(e) => setSelectedFarmerCode(e.target.value)}
                     className="mt-1 w-full light-input rounded-lg text-xs py-2 px-2"
                     required
                   >
-                    <option value="">-- Select Farmer --</option>
+                    <option value="">{t('dashboard', 'selectFarmer')}</option>
                     {farmers.map(f => (
                       <option key={f.id} value={f.code}>
                         {f.code} - {f.name} ({f.milkType})
@@ -581,21 +840,21 @@ export default function Dashboard() {
 
                 {foundFarmer && (
                   <div className="p-2 bg-gray-50 rounded-lg border border-gray-200 text-[10px] text-gray-500 flex items-center justify-between font-semibold">
-                    <span>Farmer: <strong className="text-[#091e42]">{foundFarmer.name}</strong></span>
-                    <span>Milk: <strong className="text-[#091e42]">{foundFarmer.milkType}</strong></span>
+                    <span>{t('dashboard', 'farmerLabel')}: <strong className="text-[#091e42]">{foundFarmer.name}</strong></span>
+                    <span>{t('dashboard', 'milkLabel')}: <strong className="text-[#091e42]">{foundFarmer.milkType}</strong></span>
                   </div>
                 )}
 
                 <div className="grid grid-cols-3 gap-3">
-                  {[ 
-                    { label: 'Qty (L)', val: milkQty, set: setMilkQty, ph: '0.0', step: '0.1' },
-                    { label: 'Fat %', val: milkFat, set: setMilkFat, ph: '0.0', step: '0.1' },
-                    { label: 'SNF %', val: milkSnf, set: setMilkSnf, ph: '0.0', step: '0.1' },
+                  {[
+                    { label: t('dashboard', 'qtyLabel'), val: milkQty, set: setMilkQty, ph: '0.0', step: '0.1' },
+                    { label: t('dashboard', 'fatLabel'), val: milkFat, set: setMilkFat, ph: '0.0', step: '0.1' },
+                    { label: t('dashboard', 'snfLabel'), val: milkSnf, set: setMilkSnf, ph: '0.0', step: '0.1' },
                   ].map(({ label, val, set: setter, ph, step }) => (
                     <div key={label}>
                       <label className="block text-xs font-semibold text-gray-600">{label}</label>
                       <input
-                        type="number" step={step} value={val}
+                        type="number" step={step} min="0" value={val}
                         onChange={(e) => setter(e.target.value)}
                         placeholder={ph}
                         className="mt-1 w-full light-input rounded-lg text-xs py-1.5 px-2 text-center"
@@ -609,19 +868,19 @@ export default function Dashboard() {
                   <div className="bg-[#deebff] border border-blue-200 rounded-lg p-3 flex justify-between items-center text-xs text-[#0747a6]">
                     <div>
                       <span className="text-[10px] font-bold uppercase tracking-wider block">
-                        Rate ({liveRateInfo.chartName})
+                        {t('dashboard', 'rate')} ({liveRateInfo.chartName})
                       </span>
                       <strong className="text-[#091e42] text-lg">₹{liveRateInfo.rate.toFixed(2)}/L</strong>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-bold uppercase tracking-wider block">Total Amount</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider block">{t('dashboard', 'total')}</span>
                       <strong className="text-[#0052cc] text-lg">₹{((Number(milkQty) || 0) * liveRateInfo.rate).toFixed(2)}</strong>
                     </div>
                   </div>
                 )}
 
                 <button type="submit" className="w-full bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold text-xs py-2.5 rounded-lg transition shadow-md cursor-pointer">
-                  Save Milk Collection
+                  {t('dashboard', 'saveMilkCollection')}
                 </button>
               </form>
             </div>
@@ -629,26 +888,26 @@ export default function Dashboard() {
             {/* Today's log */}
             <div className="lg:col-span-8 light-panel rounded-xl p-6">
               <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">
-                Today's Milk Collections Log
+                {t('dashboard', 'todaysMilkLog')}
               </h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
-                      <th className="py-2.5">Code</th>
-                      <th className="py-2.5">Name</th>
-                      <th className="py-2.5">Shift</th>
-                      <th className="py-2.5">Qty (L)</th>
-                      <th className="py-2.5">Fat/SNF</th>
-                      <th className="py-2.5 text-right">Rate/L</th>
-                      <th className="py-2.5 text-right">Amount</th>
-                      <th className="py-2.5 text-right">Del</th>
+                      <th className="py-2.5">{t('dashboard', 'code')}</th>
+                      <th className="py-2.5">{t('dashboard', 'name')}</th>
+                      <th className="py-2.5">{t('dashboard', 'shift')}</th>
+                      <th className="py-2.5">{t('dashboard', 'qtyL')}</th>
+                      <th className="py-2.5">{t('dashboard', 'fatSnf')}</th>
+                      <th className="py-2.5 text-right">{t('dashboard', 'rate')}</th>
+                      <th className="py-2.5 text-right">{t('dashboard', 'total')}</th>
+                      <th className="py-2.5 text-right">{t('dashboard', 'del')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
                     {collections.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-gray-400">No entries today</td>
+                        <td colSpan={8} className="py-8 text-center text-gray-400">{t('dashboard', 'noEntriesToday')}</td>
                       </tr>
                     ) : collections.map((c) => (
                       <tr key={c.id} className="hover:bg-gray-50">
@@ -656,7 +915,7 @@ export default function Dashboard() {
                         <td className="py-2.5 font-semibold text-[#091e42]">{c.customerName}</td>
                         <td className="py-2.5">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${c.shift === 'MORNING' ? 'bg-orange-100 text-orange-700' : 'bg-blue-100 text-blue-700'}`}>
-                            {c.shift[0]}
+                            {c.shift === 'MORNING' ? t('dashboard', 'morning') : t('dashboard', 'evening')}
                           </span>
                         </td>
                         <td className="py-2.5 font-mono">{c.quantity}</td>
@@ -683,21 +942,29 @@ export default function Dashboard() {
         ══════════════════════════════════════════════════════════════ */}
         {dbTab === 'farmers' && (
           <div className="space-y-6">
+            {farmerSuccessMsg && (
+              <div className="p-3 bg-green-50 border border-green-200 text-green-700 text-xs rounded-lg font-medium flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="w-4 h-4" /> {farmerSuccessMsg}
+                </div>
+                <button onClick={() => setFarmerSuccessMsg('')} className="text-green-700 font-bold">×</button>
+              </div>
+            )}
             <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50 border border-gray-200 p-4 rounded-xl">
               <div className="relative w-full sm:w-80">
                 <input
                   type="text" value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search by code, name or mobile..."
+                  placeholder={t('customer', 'searchPlaceholder')}
                   className="w-full light-input text-xs py-2 px-3 pl-9 rounded-lg"
                 />
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
               </div>
               <button
-                onClick={() => setFarmerModalOpen(true)}
+                onClick={() => { setFarmerErrorMsg(''); setFarmerModalOpen(true); }}
                 className="w-full sm:w-auto bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold text-xs px-4 py-2.5 rounded-lg transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
               >
-                <UserPlus className="w-4 h-4" /> Register Farmer
+                <UserPlus className="w-4 h-4" /> {t('customer', 'registerButton')}
               </button>
             </div>
 
@@ -706,18 +973,19 @@ export default function Dashboard() {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
-                      <th className="py-3">Code</th>
-                      <th className="py-3">Name</th>
-                      <th className="py-3">Mobile</th>
-                      <th className="py-3">Milk Type</th>
-                      <th className="py-3">Address</th>
-                      <th className="py-3 text-center">Status</th>
+                      <th className="py-3">{t('customer', 'tableCode')}</th>
+                      <th className="py-3">{t('customer', 'tableName')}</th>
+                      <th className="py-3">{t('customer', 'tableMobile')}</th>
+                      <th className="py-3">{t('customer', 'tableMilkType')}</th>
+                      <th className="py-3">{t('customer', 'tableAddress')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
                     {filteredFarmers.length === 0 ? (
                       <tr>
-                        <td colSpan={6} className="py-8 text-center text-gray-400">No farmers found</td>
+                        <td colSpan={5} className="py-8 text-center text-gray-400">
+                          {searchQuery ? t('customer', 'noSearchResults') : t('customer', 'emptyState')}
+                        </td>
                       </tr>
                     ) : filteredFarmers.map((f) => (
                       <tr key={f.id} className="hover:bg-gray-50">
@@ -726,11 +994,6 @@ export default function Dashboard() {
                         <td className="py-3.5 text-gray-500">{f.mobile}</td>
                         <td className="py-3.5 font-medium">{f.milkType}</td>
                         <td className="py-3.5 text-gray-500">{f.address || '—'}</td>
-                        <td className="py-3.5 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${f.isActive ? 'bg-green-50 text-green-700 border border-green-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
-                            {f.isActive ? 'Active' : 'Inactive'}
-                          </span>
-                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -849,33 +1112,33 @@ export default function Dashboard() {
             {/* Sell Feed Form */}
             <div className="lg:col-span-4 light-panel rounded-xl p-6 self-start space-y-4">
               <div className="flex justify-between items-center mb-2 border-b pb-2">
-                <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider">Sell Feed to Farmer</h3>
+                <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider">{t('dashboard', 'sellFeedToFarmer')}</h3>
                 <div className="flex gap-2">
                   <button onClick={() => setDealerModalOpen(true)} className="text-[10px] bg-gray-100 hover:bg-gray-200 text-[#091e42] font-bold px-2 py-1 rounded cursor-pointer">
-                    + Dealer
+                    {t('dashboard', 'addDealer')}
                   </button>
                   <button onClick={() => setPurchaseModalOpen(true)} className="text-[10px] bg-[#deebff] hover:bg-blue-100 text-[#0052cc] font-bold px-2 py-1 rounded cursor-pointer">
-                    + Purchase
+                    {t('dashboard', 'addPurchase')}
                   </button>
                 </div>
               </div>
 
               <form onSubmit={handleFeedSaleSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600">Select Farmer</label>
+                  <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'farmerLabel')}</label>
                   <select value={saleFarmerId} onChange={(e) => setSaleFarmerId(e.target.value)} className="mt-1 w-full light-input rounded-lg text-xs py-2 px-2" required>
-                    <option value="">-- Choose Farmer --</option>
+                    <option value="">{t('dashboard', 'chooseFarmer')}</option>
                     {farmers.map(f => <option key={f.id} value={f.id}>{f.code} - {f.name}</option>)}
                   </select>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-semibold text-gray-600">Select Feed Batch (Stock)</label>
+                  <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'selectFeedBatch')}</label>
                   <select value={salePurchaseId} onChange={(e) => setSalePurchaseId(e.target.value)} className="mt-1 w-full light-input rounded-lg text-xs py-2 px-2" required>
-                    <option value="">-- Select Batch --</option>
+                    <option value="">{t('dashboard', 'chooseBatch')}</option>
                     {purchases.map(p => (
                       <option key={p.id} value={p.id}>
-                        {p.foodName} (Stock: {p.remainingQuantity} / ₹{p.sellRate})
+                        {p.foodName} ({t('landing', 'stockLeft')}: {p.remainingQuantity} / ₹{p.sellRate})
                       </option>
                     ))}
                   </select>
@@ -883,44 +1146,44 @@ export default function Dashboard() {
 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600">Quantity (Bags)</label>
+                    <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'quantityBags')}</label>
                     <input type="number" value={saleQty} onChange={(e) => setSaleQty(e.target.value)} className="mt-1 w-full light-input rounded-lg text-xs py-1.5 px-2.5 text-center" required />
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-gray-600">Amount Paid (₹)</label>
+                    <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'amountPaid')}</label>
                     <input type="number" value={salePaidAmount} onChange={(e) => setSalePaidAmount(e.target.value)} disabled={saleCredit} className="mt-1 w-full light-input rounded-lg text-xs py-1.5 px-2.5 text-center disabled:opacity-50" required />
                   </div>
                 </div>
 
                 <div className="flex items-center gap-2 py-1">
                   <input type="checkbox" id="saleCredit" checked={saleCredit} onChange={(e) => setSaleCredit(e.target.checked)} className="rounded border-gray-300 accent-[#0052cc]" />
-                  <label htmlFor="saleCredit" className="text-xs font-medium text-gray-500">Book on Credit</label>
+                  <label htmlFor="saleCredit" className="text-xs font-medium text-gray-500">{t('dashboard', 'bookOnCredit')}</label>
                 </div>
 
                 <button type="submit" className="w-full bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold text-xs py-2.5 rounded-lg transition shadow-md cursor-pointer">
-                  Record Feed Sale
+                  {t('dashboard', 'recordFeedSale')}
                 </button>
               </form>
             </div>
 
             {/* Sales History */}
             <div className="lg:col-span-8 light-panel rounded-xl p-6">
-              <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">Feed Sales History</h3>
+              <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">{t('dashboard', 'feedSalesHistory')}</h3>
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
-                      <th className="py-2.5">Date</th>
-                      <th className="py-2.5">Farmer</th>
-                      <th className="py-2.5">Feed</th>
-                      <th className="py-2.5">Qty</th>
-                      <th className="py-2.5 text-right">Total</th>
-                      <th className="py-2.5 text-center">Mode</th>
+                      <th className="py-2.5">{t('dashboard', 'date')}</th>
+                      <th className="py-2.5">{t('dashboard', 'farmerLabel')}</th>
+                      <th className="py-2.5">{t('dashboard', 'feed')}</th>
+                      <th className="py-2.5">{t('dashboard', 'qty')}</th>
+                      <th className="py-2.5 text-right">{t('dashboard', 'total')}</th>
+                      <th className="py-2.5 text-center">{t('dashboard', 'mode')}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
                     {sales.length === 0 ? (
-                      <tr><td colSpan={6} className="py-8 text-center text-gray-400">No sales recorded</td></tr>
+                      <tr><td colSpan={6} className="py-8 text-center text-gray-400">{t('dashboard', 'noSalesRecorded')}</td></tr>
                     ) : sales.map((s) => (
                       <tr key={s.id} className="hover:bg-gray-50">
                         <td className="py-2.5 font-medium text-gray-500">
@@ -934,7 +1197,7 @@ export default function Dashboard() {
                         <td className="py-2.5 text-right font-mono font-bold text-[#091e42]">₹{s.totalAmount?.toFixed(2) ?? '0.00'}</td>
                         <td className="py-2.5 text-center">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.isCashPayment ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                            {s.isCashPayment ? 'Paid' : 'Credit'}
+                            {s.isCashPayment ? t('dashboard', 'paid') : t('dashboard', 'credit')}
                           </span>
                         </td>
                       </tr>
@@ -1065,6 +1328,159 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ══════════════════════════════════════════════════════════════
+            7. ADVANCES LEDGER PANEL
+        ══════════════════════════════════════════════════════════════ */}
+        {dbTab === 'advances' && (
+          <div className="space-y-8">
+
+            {/* Metrics */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+              <div className="light-panel p-5 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">{t('dashboard', 'totalAdvanceIssued')}</span>
+                  <span className="text-2xl font-black text-[#091e42] mt-1 block">₹{totalAdvanceIssued.toFixed(2)}</span>
+                  <span className="text-[10px] text-gray-400">{advances.length} total advances in DB</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-blue-50 flex items-center justify-center text-[#0052cc]">
+                  <HandCoins className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="light-panel p-5 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">{t('dashboard', 'totalRecoveredAmount')}</span>
+                  <span className="text-2xl font-black text-green-700 mt-1 block">₹{totalRecoveredAmt.toFixed(2)}</span>
+                  <span className="text-[10px] text-gray-400">Recovered to date</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-green-50 flex items-center justify-center text-green-600">
+                  <CheckCircle className="w-5 h-5" />
+                </div>
+              </div>
+
+              <div className="light-panel p-5 rounded-xl flex items-center justify-between">
+                <div>
+                  <span className="text-xs text-gray-500 block font-semibold uppercase tracking-wider">{t('dashboard', 'totalPendingBalance')}</span>
+                  <span className="text-2xl font-black text-amber-700 mt-1 block">₹{totalPendingBal.toFixed(2)}</span>
+                  <span className="text-[10px] text-gray-400">Outstanding balance</span>
+                </div>
+                <div className="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-600">
+                  <Coins className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
+            {/* Filter Bar & Issue CTA */}
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-4 bg-gray-50 border border-gray-200 p-4 rounded-xl">
+              <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto flex-1">
+                <div className="relative w-full sm:w-72">
+                  <input
+                    type="text"
+                    value={advSearchQuery}
+                    onChange={(e) => setAdvSearchQuery(e.target.value)}
+                    placeholder="Search by advance #, farmer name or mobile..."
+                    className="w-full light-input text-xs py-2 px-3 pl-9 rounded-lg"
+                  />
+                  <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
+                </div>
+
+                <select
+                  value={advStatusFilter}
+                  onChange={(e) => setAdvStatusFilter(e.target.value as any)}
+                  className="w-full sm:w-44 light-input rounded-lg text-xs py-2 px-2"
+                >
+                  <option value="ALL">All Statuses</option>
+                  <option value="ACTIVE">{t('dashboard', 'active')}</option>
+                  <option value="PARTIALLY_RECOVERED">{t('dashboard', 'partiallyRecovered')}</option>
+                  <option value="CLOSED">{t('dashboard', 'closed')}</option>
+                </select>
+              </div>
+
+              <button
+                onClick={() => setAdvanceModalOpen(true)}
+                className="w-full sm:w-auto bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold text-xs px-4 py-2.5 rounded-lg transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Plus className="w-4 h-4" /> {t('dashboard', 'issueAdvance')}
+              </button>
+            </div>
+
+            {/* Advances Table */}
+            <div className="light-panel rounded-xl p-6">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
+                      <th className="py-3">{t('dashboard', 'advanceNumber')}</th>
+                      <th className="py-3">{t('dashboard', 'farmerLabel')}</th>
+                      <th className="py-3">{t('dashboard', 'givenDate')}</th>
+                      <th className="py-3 text-right">{t('dashboard', 'originalAmount')}</th>
+                      <th className="py-3 text-right">{t('dashboard', 'recoveredAmount')}</th>
+                      <th className="py-3 text-right">{t('dashboard', 'pendingAmount')}</th>
+                      <th className="py-3 text-center">{t('dashboard', 'status')}</th>
+                      <th className="py-3 text-center">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 text-gray-700">
+                    {filteredAdvances.length === 0 ? (
+                      <tr>
+                        <td colSpan={8} className="py-8 text-center text-gray-400">
+                          {advLoading ? 'Loading advances...' : t('dashboard', 'noAdvancesFound')}
+                        </td>
+                      </tr>
+                    ) : filteredAdvances.map((adv) => (
+                      <tr key={adv.id} className="hover:bg-gray-50">
+                        <td className="py-3.5 font-mono font-bold text-[#0052cc]">{adv.advanceNumber}</td>
+                        <td className="py-3.5 font-semibold text-[#091e42]">
+                          {adv.customer?.name ?? '—'} <span className="text-gray-400 font-normal">({adv.customer?.mobile})</span>
+                        </td>
+                        <td className="py-3.5 text-gray-500">{adv.givenDate ? String(adv.givenDate).split('T')[0] : '—'}</td>
+                        <td className="py-3.5 text-right font-mono font-bold text-[#091e42]">₹{Number(adv.originalAmount || 0).toFixed(2)}</td>
+                        <td className="py-3.5 text-right font-mono text-green-700 font-semibold">₹{Number(adv.recoveredAmount || 0).toFixed(2)}</td>
+                        <td className="py-3.5 text-right font-mono text-amber-700 font-bold">₹{Number(adv.pendingAmount || 0).toFixed(2)}</td>
+                        <td className="py-3.5 text-center">
+                          <span className={`px-2.5 py-0.5 rounded text-[10px] font-bold ${adv.status === 'ACTIVE'
+                              ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                              : adv.status === 'PARTIALLY_RECOVERED'
+                                ? 'bg-amber-50 text-amber-700 border border-amber-200'
+                                : 'bg-green-50 text-green-700 border border-green-200'
+                            }`}>
+                            {adv.status === 'ACTIVE' ? t('dashboard', 'active') : adv.status === 'PARTIALLY_RECOVERED' ? t('dashboard', 'partiallyRecovered') : t('dashboard', 'closed')}
+                          </span>
+                        </td>
+                        <td className="py-3.5 text-center flex justify-center gap-2">
+                          {adv.status !== 'CLOSED' && (
+                            <button
+                              onClick={() => {
+                                setSelectedAdvance(adv);
+                                setRepayAmount('');
+                                setRepayNotes('');
+                                setRepaymentModalOpen(true);
+                              }}
+                              className="px-2.5 py-1 text-[10px] bg-green-50 hover:bg-green-100 text-green-700 border border-green-200 font-bold rounded transition cursor-pointer"
+                            >
+                              + Repay
+                            </button>
+                          )}
+                          <button
+                            onClick={() => {
+                              setSelectedAdvance(adv);
+                              setHistoryModalOpen(true);
+                            }}
+                            className="px-2 py-1 text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded transition cursor-pointer flex items-center gap-1"
+                          >
+                            <HistoryIcon className="w-3 h-3" /> History
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+        )}
+
       </main>
 
       {/* ══════════════════════════════════════════════════════════════
@@ -1073,37 +1489,96 @@ export default function Dashboard() {
       {farmerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => setFarmerModalOpen(false)} />
-          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl">
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl max-h-[90vh] overflow-y-auto mx-4">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-[#f4f5f7]">
-              <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">Register Farmer</h4>
+              <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">{t('customer', 'registerModalTitle')}</h4>
               <button onClick={() => setFarmerModalOpen(false)} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
             </div>
             <form onSubmit={handleAddFarmerSubmit} className="p-5 space-y-4 text-xs">
+              {farmerErrorMsg && (
+                <div className="p-3 bg-red-50 border border-red-200 text-red-700 text-xs rounded-lg font-medium flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0" /> {farmerErrorMsg}
+                </div>
+              )}
+
+              {/* 1. Customer Code */}
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Full Name</label>
-                <input type="text" value={fName} onChange={(e) => setFName(e.target.value)} placeholder="e.g. Ramesh Patil" className="mt-1 w-full light-input rounded py-1.5 px-2.5" required />
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t('customer', 'customerCode')}</label>
+                <input
+                  type="text"
+                  value={fCode}
+                  onChange={(e) => setFCode(e.target.value)}
+                  placeholder={t('customer', 'customerCodePlaceholder')}
+                  className="mt-1 w-full light-input rounded py-1.5 px-2.5"
+                  maxLength={20}
+                  required
+                />
               </div>
+
+              {/* 2. Full Name */}
+              <div>
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t('customer', 'fullName')}</label>
+                <input
+                  type="text"
+                  value={fName}
+                  onChange={(e) => setFName(e.target.value)}
+                  placeholder={t('customer', 'fullNamePlaceholder')}
+                  className="mt-1 w-full light-input rounded py-1.5 px-2.5"
+                  required
+                />
+              </div>
+
+              {/* 3. Mobile & 4. Milk Type */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Mobile</label>
-                  <input type="text" value={fMobile} onChange={(e) => setFMobile(e.target.value)} placeholder="10 digit number" className="mt-1 w-full light-input rounded py-1.5 px-2.5" required />
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t('customer', 'mobile')}</label>
+                  <input
+                    type="tel"
+                    value={fMobile}
+                    onChange={(e) => setFMobile(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                    placeholder={t('customer', 'mobilePlaceholder')}
+                    className="mt-1 w-full light-input rounded py-1.5 px-2.5"
+                    maxLength={10}
+                    required
+                  />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Milk Type</label>
+                  <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t('customer', 'milkType')}</label>
                   <select value={fMilkType} onChange={(e) => setFMilkType(e.target.value as any)} className="mt-1 w-full light-input rounded py-1.5 px-2">
-                    <option value="COW">COW</option>
-                    <option value="BUFFALO">BUFFALO</option>
-                    <option value="MIX">MIX</option>
+                    <option value="COW">{t('customer', 'cow')}</option>
+                    <option value="BUFFALO">{t('customer', 'buffalo')}</option>
+                    <option value="MIX">{t('customer', 'mix')}</option>
                   </select>
                 </div>
               </div>
+
+              {/* 5. Address / Village */}
               <div>
-                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Address / Village</label>
-                <input type="text" value={fAddress} onChange={(e) => setFAddress(e.target.value)} placeholder="Village name" className="mt-1 w-full light-input rounded py-1.5 px-2.5" />
+                <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t('customer', 'addressVillage')}</label>
+                <input
+                  type="text"
+                  value={fAddress}
+                  onChange={(e) => setFAddress(e.target.value)}
+                  placeholder={t('customer', 'addressPlaceholder')}
+                  className="mt-1 w-full light-input rounded py-1.5 px-2.5"
+                />
               </div>
-              <button type="submit" className="w-full bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold py-2 rounded transition cursor-pointer">
-                Register Farmer
-              </button>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setFarmerModalOpen(false)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold py-2 rounded transition cursor-pointer"
+                >
+                  {t('customer', 'cancel')}
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold py-2 rounded transition cursor-pointer"
+                >
+                  {t('customer', 'registerSubmit')}
+                </button>
+              </div>
             </form>
           </div>
         </div>
@@ -1115,7 +1590,7 @@ export default function Dashboard() {
       {dealerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => setDealerModalOpen(false)} />
-          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl">
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl max-h-[90vh] overflow-y-auto mx-4">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-[#f4f5f7]">
               <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">Add Wholesale Dealer</h4>
               <button onClick={() => setDealerModalOpen(false)} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
@@ -1153,7 +1628,7 @@ export default function Dashboard() {
       {purchaseModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => setPurchaseModalOpen(false)} />
-          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl">
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl max-h-[90vh] overflow-y-auto mx-4">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-[#f4f5f7]">
               <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">Record Bulk Stock Purchase</h4>
               <button onClick={() => setPurchaseModalOpen(false)} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
@@ -1196,6 +1671,197 @@ export default function Dashboard() {
                 Log Bulk Purchase
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          MODAL: ISSUE ADVANCE
+      ══════════════════════════════════════════════════════════════ */}
+      {advanceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => setAdvanceModalOpen(false)} />
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl max-h-[90vh] overflow-y-auto mx-4">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-[#f4f5f7]">
+              <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">{t('dashboard', 'issueAdvance')}</h4>
+              <button onClick={() => setAdvanceModalOpen(false)} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
+            </div>
+            <form onSubmit={handleCreateAdvanceSubmit} className="p-5 space-y-4 text-xs">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'selectFarmer')}</label>
+                <select
+                  value={advCustomerId}
+                  onChange={(e) => setAdvCustomerId(e.target.value)}
+                  className="mt-1 w-full light-input rounded-lg py-2 px-2"
+                  required
+                >
+                  <option value="">{t('dashboard', 'selectFarmer')}</option>
+                  {farmers.map(f => (
+                    <option key={f.id} value={f.id}>{f.code} - {f.name} ({f.mobile})</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'originalAmount')} (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={advAmount}
+                  onChange={(e) => setAdvAmount(e.target.value)}
+                  placeholder="e.g. 5000"
+                  className="mt-1 w-full light-input rounded-lg py-1.5 px-2.5"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'givenDate')}</label>
+                <input
+                  type="date"
+                  value={advDate}
+                  onChange={(e) => setAdvDate(e.target.value)}
+                  className="mt-1 w-full light-input rounded-lg py-1.5 px-2.5"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'notesOptional')}</label>
+                <textarea
+                  value={advNotes}
+                  onChange={(e) => setAdvNotes(e.target.value)}
+                  placeholder="Purpose of advance loan..."
+                  rows={3}
+                  className="mt-1 w-full light-input rounded-lg py-1.5 px-2.5"
+                />
+              </div>
+
+              <button type="submit" disabled={advLoading} className="w-full bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold py-2.5 rounded-lg transition shadow-md cursor-pointer">
+                {advLoading ? 'Processing...' : t('dashboard', 'saveAdvance')}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          MODAL: RECORD REPAYMENT
+      ══════════════════════════════════════════════════════════════ */}
+      {repaymentModalOpen && selectedAdvance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => setRepaymentModalOpen(false)} />
+          <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl max-h-[90vh] overflow-y-auto mx-4">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-[#f4f5f7]">
+              <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">{t('dashboard', 'recordRepaymentTitle')}</h4>
+              <button onClick={() => setRepaymentModalOpen(false)} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
+            </div>
+            <form onSubmit={handleRepaymentSubmit} className="p-5 space-y-4 text-xs">
+              <div className="bg-[#deebff] border border-blue-200 rounded-lg p-3 text-xs space-y-1">
+                <div className="flex justify-between text-gray-700">
+                  <span>{t('dashboard', 'advanceNumber')}:</span>
+                  <strong className="font-mono text-[#0052cc]">{selectedAdvance.advanceNumber}</strong>
+                </div>
+                <div className="flex justify-between text-gray-700">
+                  <span>{t('dashboard', 'farmerLabel')}:</span>
+                  <strong className="text-[#091e42]">{selectedAdvance.customer?.name}</strong>
+                </div>
+                <div className="flex justify-between text-[#0747a6] pt-1 border-t border-blue-200">
+                  <span>{t('dashboard', 'pendingAmount')}:</span>
+                  <strong className="font-mono text-lg text-amber-700">₹{Number(selectedAdvance.pendingAmount || 0).toFixed(2)}</strong>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'repaymentAmountLabel')}</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  max={Number(selectedAdvance.pendingAmount || 0)}
+                  value={repayAmount}
+                  onChange={(e) => setRepayAmount(e.target.value)}
+                  placeholder={`Max ₹${Number(selectedAdvance.pendingAmount || 0).toFixed(2)}`}
+                  className="mt-1 w-full light-input rounded-lg py-1.5 px-2.5"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'notesOptional')}</label>
+                <textarea
+                  value={repayNotes}
+                  onChange={(e) => setRepayNotes(e.target.value)}
+                  placeholder="Repayment remarks..."
+                  rows={3}
+                  className="mt-1 w-full light-input rounded-lg py-1.5 px-2.5"
+                />
+              </div>
+
+              <button type="submit" disabled={advLoading} className="w-full bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold py-2.5 rounded-lg transition shadow-md cursor-pointer">
+                {advLoading ? 'Saving...' : t('dashboard', 'saveRepayment')}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ══════════════════════════════════════════════════════════════
+          MODAL: TRANSACTION HISTORY
+      ══════════════════════════════════════════════════════════════ */}
+      {historyModalOpen && selectedAdvance && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => setHistoryModalOpen(false)} />
+          <div className="relative w-full max-w-lg bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl max-h-[90vh] overflow-y-auto mx-4">
+            <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-[#f4f5f7]">
+              <div>
+                <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">{t('dashboard', 'advanceHistoryTitle')}</h4>
+                <span className="text-[10px] text-[#0052cc] font-mono font-bold">{selectedAdvance.advanceNumber}</span>
+              </div>
+              <button onClick={() => setHistoryModalOpen(false)} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
+            </div>
+
+            <div className="p-5 space-y-4 text-xs">
+              <div className="grid grid-cols-3 gap-3 bg-gray-50 p-3 rounded-lg border text-center">
+                <div>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Original</span>
+                  <strong className="font-mono text-[#091e42]">₹{Number(selectedAdvance.originalAmount || 0).toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Recovered</span>
+                  <strong className="font-mono text-green-700">₹{Number(selectedAdvance.recoveredAmount || 0).toFixed(2)}</strong>
+                </div>
+                <div>
+                  <span className="text-[10px] text-gray-400 font-bold uppercase block">Pending</span>
+                  <strong className="font-mono text-amber-700">₹{selectedAdvance.pendingAmount.toFixed(2)}</strong>
+                </div>
+              </div>
+
+              <div>
+                <h5 className="text-[10px] font-bold text-gray-500 uppercase tracking-wider mb-2">Ledger Entries</h5>
+                {!selectedAdvance.transactions || selectedAdvance.transactions.length === 0 ? (
+                  <div className="text-center py-4 text-gray-400 text-xs bg-gray-50 rounded border">No transaction entries</div>
+                ) : (
+                  <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                    {selectedAdvance.transactions.map((tx) => (
+                      <div key={tx.id} className="p-2.5 bg-gray-50 border border-gray-200 rounded-lg flex justify-between items-center text-xs">
+                        <div>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${tx.type === 'ISSUED' ? 'bg-blue-100 text-blue-800' : 'bg-green-100 text-green-800'
+                            }`}>
+                            {tx.type}
+                          </span>
+                          <span className="text-[10px] text-gray-400 block mt-1">
+                            {tx.createdAt ? new Date(tx.createdAt).toLocaleDateString() : '—'} {tx.notes ? `• ${tx.notes}` : ''}
+                          </span>
+                        </div>
+                        <strong className={`font-mono text-sm ${tx.type === 'ISSUED' ? 'text-[#091e42]' : 'text-green-700'}`}>
+                          {tx.type === 'ISSUED' ? '+' : '-'}₹{tx.amount.toFixed(2)}
+                        </strong>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </div>
       )}

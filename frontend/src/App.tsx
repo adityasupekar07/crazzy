@@ -1,13 +1,16 @@
 import { useEffect } from 'react';
-import { useUIStore } from './store/useUIStore';
-import { useAuthStore } from './store/useAuthStore';
+import { useUIStore, useAuthStore } from './store';
 import LandingPage from './components/LandingPage';
 import Dashboard from './components/Dashboard';
 import AuthModal from './components/AuthModal';
 
 function App() {
-  const { currentView, setView, setAuthModal } = useUIStore();
-  const { initialize, user } = useAuthStore();
+  const currentView = useUIStore((state) => state.currentView);
+  const setView = useUIStore((state) => state.setView);
+  const setAuthModal = useUIStore((state) => state.setAuthModal);
+
+  const user = useAuthStore((state) => state.user);
+  const initialize = useAuthStore((state) => state.initialize);
 
   // Restore auth state from localStorage on first mount
   useEffect(() => {

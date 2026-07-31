@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
-import { useUIStore } from '../store/useUIStore';
-import { useAuthStore } from '../store/useAuthStore';
-import { useRateChartStore } from '../store/useRateChartStore';
+import { useUIStore, useAuthStore, useRateChartStore, useTranslation } from '../store';
+import LanguageSelector from './LanguageSelector';
 import { 
   Milk, 
   Users, 
@@ -20,9 +19,13 @@ import {
 } from 'lucide-react';
 
 export default function LandingPage() {
-  const { setView, setAuthModal } = useUIStore();
-  const { user, logout, initialize } = useAuthStore();
-  const { calculateRate } = useRateChartStore();
+  const setView = useUIStore((state) => state.setView);
+  const setAuthModal = useUIStore((state) => state.setAuthModal);
+  const user = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
+  const initialize = useAuthStore((state) => state.initialize);
+  const calculateRate = useRateChartStore((state) => state.calculateRate);
+  const { t } = useTranslation();
 
   const [activeTab, setActiveTab] = useState<'collection' | 'farmers' | 'rates' | 'feed'>('collection');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -43,10 +46,10 @@ export default function LandingPage() {
 
   // Feature tab configurations
   const tabs = [
-    { id: 'collection', label: 'Milk Collection', icon: Milk },
-    { id: 'farmers', label: 'Farmer Directory', icon: Users },
-    { id: 'rates', label: 'Rate Slabs', icon: FileSpreadsheet },
-    { id: 'feed', label: 'Feed Inventory', icon: ShoppingBag },
+    { id: 'collection', label: t('landing', 'demoTabCollection'), icon: Milk },
+    { id: 'farmers', label: t('landing', 'demoTabFarmers'), icon: Users },
+    { id: 'rates', label: t('landing', 'demoTabRates'), icon: FileSpreadsheet },
+    { id: 'feed', label: t('landing', 'demoTabFeed'), icon: ShoppingBag },
   ];
 
   return (
@@ -72,22 +75,22 @@ export default function LandingPage() {
               <nav className="hidden lg:flex items-center gap-6">
                 <div className="relative group">
                   <button className="flex items-center gap-1 text-sm font-semibold text-[#505f79] hover:text-[#091e42] transition cursor-pointer">
-                    Features <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition" />
+                    {t('nav', 'features')} <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition" />
                   </button>
                   {/* Dropdown menu */}
                   <div className="absolute left-0 mt-2 w-64 bg-white border border-[#dfe1e6] rounded-xl shadow-xl p-4 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition duration-200 translate-y-2 group-hover:translate-y-0 z-10">
                     <div className="space-y-3">
                       <div>
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Milk Intake</h4>
-                        <p className="text-xs text-gray-500 mt-0.5">Real-time fat/SNF slab pricing, custom shifts.</p>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('landing', 'recordMilkIntakeTitle')}</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">{t('landing', 'recordMilkIntakeDesc')}</p>
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Farmer Credit Ledger</h4>
-                        <p className="text-xs text-gray-500 mt-0.5">Automated advances, recoveries, payments.</p>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('landing', 'farmerDirectoryTitle')}</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">{t('landing', 'farmerDirectoryDesc')}</p>
                       </div>
                       <div>
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">Inventory & Feed Sales</h4>
-                        <p className="text-xs text-gray-500 mt-0.5">Cattle feed purchases, sales booked to billing.</p>
+                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider">{t('landing', 'feedInventoryTitle')}</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">{t('landing', 'feedInventoryDesc')}</p>
                       </div>
                     </div>
                   </div>
@@ -95,34 +98,37 @@ export default function LandingPage() {
 
                 <div className="relative group">
                   <button className="flex items-center gap-1 text-sm font-semibold text-[#505f79] hover:text-[#091e42] transition cursor-pointer">
-                    Slab Setup <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition" />
+                    {t('nav', 'rateSheets')} <ChevronDown className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition" />
                   </button>
                   <div className="absolute left-0 mt-2 w-56 bg-white border border-[#dfe1e6] rounded-xl shadow-xl p-3 opacity-0 group-hover:opacity-100 pointer-events-none group-hover:pointer-events-auto transition duration-200 translate-y-2 group-hover:translate-y-0 z-10">
                     <div className="space-y-2 text-xs">
-                      <a href="#" className="block p-2 hover:bg-gray-50 rounded-lg text-gray-600 hover:text-[#091e42] font-medium">Fixed Rate Sheets</a>
-                      <a href="#" className="block p-2 hover:bg-gray-50 rounded-lg text-gray-600 hover:text-[#091e42] font-medium">Fat-Based Pricing</a>
-                      <a href="#" className="block p-2 hover:bg-gray-50 rounded-lg text-gray-600 hover:text-[#091e42] font-medium">FAT + SNF Grid Sheets</a>
+                      <a href="#" className="block p-2 hover:bg-gray-50 rounded-lg text-gray-600 hover:text-[#091e42] font-medium">{t('auth', 'fixedRate')}</a>
+                      <a href="#" className="block p-2 hover:bg-gray-50 rounded-lg text-gray-600 hover:text-[#091e42] font-medium">{t('auth', 'fatBasedOnly')}</a>
+                      <a href="#" className="block p-2 hover:bg-gray-50 rounded-lg text-gray-600 hover:text-[#091e42] font-medium">{t('auth', 'fatSnfBased')}</a>
                     </div>
                   </div>
                 </div>
 
-                <a href="#" className="text-sm font-semibold text-[#505f79] hover:text-[#091e42] transition">Pricing</a>
-                <a href="#" className="text-sm font-semibold text-[#505f79] hover:text-[#091e42] transition">Case Studies</a>
+                <a href="#" className="text-sm font-semibold text-[#505f79] hover:text-[#091e42] transition">{t('nav', 'pricing')}</a>
+                <a href="#" className="text-sm font-semibold text-[#505f79] hover:text-[#091e42] transition">{t('nav', 'caseStudies')}</a>
               </nav>
             </div>
 
-            {/* Right Side: Search, Profile/CTA */}
+            {/* Right Side: Search, Language, Profile/CTA */}
             <div className="hidden sm:flex items-center gap-4">
               
               {/* Search Bar Mock */}
-              <div className="relative w-48 md:w-64">
+              <div className="relative w-40 md:w-56">
                 <input 
                   type="text" 
-                  placeholder="Search farmers..." 
+                  placeholder={t('nav', 'searchFarmers')} 
                   className="w-full bg-[#fafbfc] border border-[#dfe1e6] hover:border-gray-400 text-xs px-3 py-1.5 pl-8 rounded-lg focus:outline-none focus:border-brand-500 transition text-[#091e42] font-medium"
                 />
                 <Search className="w-3.5 h-3.5 text-gray-400 absolute left-2.5 top-2.5" />
               </div>
+
+              {/* Language Switcher */}
+              <LanguageSelector variant="light" />
 
               {user ? (
                 <div className="flex items-center gap-3">
@@ -130,13 +136,13 @@ export default function LandingPage() {
                     onClick={() => setView('dashboard')}
                     className="bg-[#0052cc] hover:bg-[#0747a6] text-white font-semibold text-xs px-4 py-2 rounded-lg transition shadow-md shadow-brand-500/10 cursor-pointer"
                   >
-                    Go to Dashboard
+                    {t('nav', 'dashboard')}
                   </button>
                   <button 
                     onClick={logout}
                     className="border border-[#dfe1e6] hover:bg-gray-50 text-gray-500 hover:text-[#091e42] text-xs px-3 py-2 rounded-lg transition cursor-pointer"
                   >
-                    Logout
+                    {t('nav', 'logout')}
                   </button>
                 </div>
               ) : (
@@ -145,25 +151,26 @@ export default function LandingPage() {
                     onClick={() => setAuthModal(true, 'login')}
                     className="text-xs font-bold text-[#505f79] hover:text-[#091e42] px-3 py-2 transition cursor-pointer"
                   >
-                    Sign In
+                    {t('nav', 'signIn')}
                   </button>
                   <button 
                     onClick={() => setAuthModal(true, 'register')}
                     className="bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold text-xs px-4 py-2 rounded-lg transition shadow-md cursor-pointer"
                   >
-                    Get started
+                    {t('nav', 'getStarted')}
                   </button>
                 </div>
               )}
             </div>
 
-            {/* Mobile Burger Menu Button */}
+            {/* Mobile Burger Menu Button & Lang Selector */}
             <div className="flex items-center lg:hidden gap-2">
+              <LanguageSelector variant="light" />
               <button 
                 onClick={() => setAuthModal(true, 'register')}
                 className="bg-[#0052cc] text-white text-xs px-3 py-1.5 rounded-lg font-bold transition"
               >
-                Sign Up
+                {t('auth', 'signUp')}
               </button>
               <button
                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -179,22 +186,22 @@ export default function LandingPage() {
         {/* Mobile Navigation Drawer */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-b border-[#dfe1e6] bg-[#fafbfc] px-4 pt-2 pb-6 space-y-3 shadow-md">
-            <a href="#" className="block py-2 text-sm text-[#505f79] hover:text-[#091e42] font-semibold">Features</a>
-            <a href="#" className="block py-2 text-sm text-[#505f79] hover:text-[#091e42] font-semibold">Rate Sheets</a>
-            <a href="#" className="block py-2 text-sm text-[#505f79] hover:text-[#091e42] font-semibold">Pricing</a>
+            <a href="#" className="block py-2 text-sm text-[#505f79] hover:text-[#091e42] font-semibold">{t('nav', 'features')}</a>
+            <a href="#" className="block py-2 text-sm text-[#505f79] hover:text-[#091e42] font-semibold">{t('nav', 'rateSheets')}</a>
+            <a href="#" className="block py-2 text-sm text-[#505f79] hover:text-[#091e42] font-semibold">{t('nav', 'pricing')}</a>
             {user ? (
               <div className="pt-2 flex flex-col gap-2">
                 <button 
                   onClick={() => { setView('dashboard'); setMobileMenuOpen(false); }}
                   className="bg-[#0052cc] text-center text-white py-2 rounded-lg text-sm font-semibold"
                 >
-                  Dashboard
+                  {t('nav', 'dashboard')}
                 </button>
                 <button 
                   onClick={() => { logout(); setMobileMenuOpen(false); }}
                   className="border border-[#dfe1e6] text-center text-gray-500 py-2 rounded-lg text-sm"
                 >
-                  Logout
+                  {t('nav', 'logout')}
                 </button>
               </div>
             ) : (
@@ -203,13 +210,13 @@ export default function LandingPage() {
                   onClick={() => { setAuthModal(true, 'login'); setMobileMenuOpen(false); }}
                   className="border border-[#dfe1e6] text-center text-[#505f79] py-2 rounded-lg text-sm font-semibold"
                 >
-                  Sign In
+                  {t('nav', 'signIn')}
                 </button>
                 <button 
                   onClick={() => { setAuthModal(true, 'register'); setMobileMenuOpen(false); }}
                   className="bg-[#0052cc] text-center text-white py-2 rounded-lg text-sm font-semibold"
                 >
-                  Get Started
+                  {t('nav', 'getStarted')}
                 </button>
               </div>
             )}
@@ -227,20 +234,20 @@ export default function LandingPage() {
 
         {/* Small floating badge */}
         <div className="inline-flex items-center gap-1.5 bg-[#deebff] border border-blue-100 px-3.5 py-1 rounded-full text-[#0747a6] text-xs font-bold tracking-wide mb-6">
-          <CheckCircle2 className="w-3.5 h-3.5 text-[#0052cc]" /> Automate Dairy Operations & Payouts
+          <CheckCircle2 className="w-3.5 h-3.5 text-[#0052cc]" /> {t('landing', 'heroBadge')}
         </div>
 
         {/* Big Headline */}
         <h1 className="text-4xl sm:text-5xl md:text-6xl font-display font-extrabold tracking-tight text-[#091e42] max-w-4xl mx-auto leading-[1.1]">
-          Unleash dairy efficiency with <br />
+          {t('landing', 'heroTitle1')} <br />
           <span className="text-[#0052cc]">
-            LactoFlow + Automated Billing
+            {t('landing', 'heroTitleHighlight')}
           </span>
         </h1>
 
         {/* Subtitle */}
         <p className="mt-6 text-base sm:text-lg md:text-xl text-[#505f79] max-w-2xl mx-auto font-normal leading-relaxed">
-          Record milk weight daily, auto-lookup FAT + SNF rate charts, handle advances, and settle periodic bills in one unified workspace.
+          {t('landing', 'heroSubtitle')}
         </p>
 
         {/* CTA Buttons */}
@@ -249,7 +256,7 @@ export default function LandingPage() {
             onClick={() => setAuthModal(true, 'register')}
             className="w-full sm:w-auto bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold text-sm px-8 py-3.5 rounded-xl transition shadow-lg shadow-brand-500/10 flex items-center justify-center gap-2 group cursor-pointer"
           >
-            Get started for free
+            {t('landing', 'getStartedFree')}
             <ArrowRight className="w-4 h-4 text-white group-hover:translate-x-1 transition" />
           </button>
           
@@ -260,12 +267,12 @@ export default function LandingPage() {
             }}
             className="w-full sm:w-auto border border-[#dfe1e6] hover:bg-gray-50 text-[#091e42] font-semibold text-sm px-8 py-3.5 rounded-xl transition cursor-pointer"
           >
-            See interactive demo
+            {t('landing', 'seeDemo')}
           </button>
         </div>
 
         <p className="mt-4 text-xs text-gray-400">
-          No credit card required. Configurable for COW, BUFFALO, or MIXED milk types.
+          {t('landing', 'noCcRequired')}
         </p>
       </section>
 
@@ -310,7 +317,7 @@ export default function LandingPage() {
               <span className="text-[10px] text-gray-400 font-mono ml-4">workspace://lactoflow-dashboard/client</span>
             </div>
             <div className="text-[10px] bg-[#deebff] text-[#0747a6] font-bold px-2 py-0.5 rounded border border-blue-100">
-              Live Mockup
+              {t('landing', 'liveMockup')}
             </div>
           </div>
 
@@ -323,23 +330,23 @@ export default function LandingPage() {
                 {/* Left explanation */}
                 <div className="lg:col-span-5 space-y-4">
                   <h3 className="text-2xl font-display font-bold text-[#091e42] leading-snug">
-                    Record milk intake with live rate calculation
+                    {t('landing', 'recordMilkIntakeTitle')}
                   </h3>
                   <p className="text-sm text-gray-500 leading-relaxed font-medium">
-                    Input milk weight and FAT/SNF percentage. The system automatically fetches pricing from active rate charts (Fixed, Fat-based, or Fat + SNF grids) and displays the net total instantly.
+                    {t('landing', 'recordMilkIntakeDesc')}
                   </p>
                   <ul className="space-y-2 text-xs text-gray-500">
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Supports MORNING and EVENING shifts.</span>
+                      <span>{t('landing', 'shiftSupport')}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Validation warnings for impossible FAT% ranges.</span>
+                      <span>{t('landing', 'fatValidationWarning')}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Print receipt slips or trigger SMS triggers to farmers.</span>
+                      <span>{t('landing', 'printReceipts')}</span>
                     </li>
                   </ul>
                 </div>
@@ -348,28 +355,28 @@ export default function LandingPage() {
                 <div className="lg:col-span-7 bg-white border border-[#dfe1e6] rounded-xl p-5 shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-4">
                     <div className="text-xs font-bold text-[#091e42] uppercase tracking-wider flex items-center gap-1.5">
-                      <Calculator className="w-3.5 h-3.5 text-[#0052cc]" /> Collection Calculator
+                      <Calculator className="w-3.5 h-3.5 text-[#0052cc]" /> {t('landing', 'collectionCalculator')}
                     </div>
                     <div className="text-[10px] text-gray-500 flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-500" /> Active Chart: {chartName}
+                      <span className="w-2 h-2 rounded-full bg-green-500" /> {t('landing', 'activeChart')}: {chartName}
                     </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Milk Type</label>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('landing', 'milkType')}</label>
                       <select 
                         value={demoMilkType} 
                         onChange={(e) => setDemoMilkType(e.target.value as any)}
                         className="mt-1 w-full bg-[#fafbfc] border border-[#dfe1e6] rounded-lg text-xs py-2 px-2.5 text-[#091e42] font-semibold outline-none focus:border-brand-500 transition"
                       >
-                        <option value="COW">COW</option>
-                        <option value="BUFFALO">BUFFALO</option>
-                        <option value="MIX">MIXED (Flat Rate)</option>
+                        <option value="COW">{t('landing', 'cow')}</option>
+                        <option value="BUFFALO">{t('landing', 'buffalo')}</option>
+                        <option value="MIX">{t('landing', 'mix')}</option>
                       </select>
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quantity (Litres)</label>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('landing', 'quantityLitres')}</label>
                       <input 
                         type="number" 
                         value={demoQty} 
@@ -378,7 +385,7 @@ export default function LandingPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Fat %</label>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('landing', 'fatPercent')}</label>
                       <input 
                         type="number" 
                         step="0.1" 
@@ -388,7 +395,7 @@ export default function LandingPage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">SNF %</label>
+                      <label className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('landing', 'snfPercent')}</label>
                       <input 
                         type="number" 
                         step="0.1" 
@@ -402,11 +409,11 @@ export default function LandingPage() {
                   {/* Pricing Result */}
                   <div className="mt-5 bg-[#deebff] border border-blue-200 rounded-lg p-3.5 flex items-center justify-between text-[#0747a6]">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider block">Computed Price</span>
-                      <span className="text-lg font-bold text-[#091e42]">₹{rate.toFixed(2)} <span className="text-xs text-gray-500 font-normal">/ Litre</span></span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider block">{t('landing', 'computedPrice')}</span>
+                      <span className="text-lg font-bold text-[#091e42]">₹{rate.toFixed(2)} <span className="text-xs text-gray-500 font-normal">{t('landing', 'perLitre')}</span></span>
                     </div>
                     <div className="text-right">
-                      <span className="text-[10px] font-bold uppercase tracking-wider block">Total Payout</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider block">{t('landing', 'totalPayout')}</span>
                       <span className="text-xl font-black text-[#0052cc]">₹{demoTotal.toFixed(2)}</span>
                     </div>
                   </div>
@@ -421,23 +428,23 @@ export default function LandingPage() {
                 {/* Left explanation */}
                 <div className="lg:col-span-5 space-y-4">
                   <h3 className="text-2xl font-display font-bold text-[#091e42] leading-snug">
-                    Farmer directory with automated advance ledgers
+                    {t('landing', 'farmerDirectoryTitle')}
                   </h3>
                   <p className="text-sm text-gray-500 leading-relaxed font-medium">
-                    Track details for every supplier. Assign unique farmer codes, bank account details, and manage advance payments (loans) that are automatically recovered during billing cycles.
+                    {t('landing', 'farmerDirectoryDesc')}
                   </p>
                   <ul className="space-y-2 text-xs text-gray-500">
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Check outstanding advance balance at a glance.</span>
+                      <span>{t('landing', 'checkOutstandingAdvance')}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Toggle active/inactive status to stop entries.</span>
+                      <span>{t('landing', 'toggleActiveStatus')}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Integrated ledger for advance given/deducted history.</span>
+                      <span>{t('landing', 'integratedLedger')}</span>
                     </li>
                   </ul>
                 </div>
@@ -446,7 +453,7 @@ export default function LandingPage() {
                 <div className="lg:col-span-7 bg-white border border-[#dfe1e6] rounded-xl p-4 shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
                     <div className="text-xs font-bold text-[#091e42] uppercase tracking-wider flex items-center gap-1.5">
-                      <Users className="w-3.5 h-3.5 text-[#0052cc]" /> Farmers Ledger View
+                      <Users className="w-3.5 h-3.5 text-[#0052cc]" /> {t('landing', 'farmersLedgerView')}
                     </div>
                   </div>
 
@@ -463,11 +470,11 @@ export default function LandingPage() {
                           </div>
                           <div>
                             <span className="font-bold text-[#091e42] block">{f.name}</span>
-                            <span className="text-[10px] text-gray-500 font-semibold uppercase">Prefers: {f.milk}</span>
+                            <span className="text-[10px] text-gray-500 font-semibold uppercase">{t('landing', 'prefers')}: {f.milk}</span>
                           </div>
                         </div>
                         <div className="text-right">
-                          <span className="text-[10px] text-gray-400 block font-bold">Advance Balance</span>
+                          <span className="text-[10px] text-gray-400 block font-bold">{t('landing', 'advanceBalance')}</span>
                           <span className={`font-bold ${f.advance > 1000 ? 'text-red-600' : 'text-gray-700'}`}>
                             ₹{f.advance.toFixed(2)}
                           </span>
@@ -487,23 +494,23 @@ export default function LandingPage() {
                 {/* Left explanation */}
                 <div className="lg:col-span-5 space-y-4">
                   <h3 className="text-2xl font-display font-bold text-[#091e42] leading-snug">
-                    Configurable price sheets by FAT and SNF ranges
+                    {t('landing', 'rateSlabsTitle')}
                   </h3>
                   <p className="text-sm text-gray-500 leading-relaxed font-medium">
-                    Set precise pricing slabs. For instance, define that COW milk with FAT between 3.5% and 3.9% and SNF between 8.5% and 9.0% commands exactly ₹36.00/litre.
+                    {t('landing', 'rateSlabsDesc')}
                   </p>
                   <ul className="space-y-2 text-xs text-gray-500">
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Add separate sheets for Cow, Buffalo, and Mixed.</span>
+                      <span>{t('landing', 'cowBuffaloMixSheets')}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Multiple active charts categorized by seasons.</span>
+                      <span>{t('landing', 'multipleActiveCharts')}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Fully customizable slabs to match government rules.</span>
+                      <span>{t('landing', 'customizableSlabs')}</span>
                     </li>
                   </ul>
                 </div>
@@ -512,7 +519,7 @@ export default function LandingPage() {
                 <div className="lg:col-span-7 bg-white border border-[#dfe1e6] rounded-xl p-4 shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-100 mb-3">
                     <div className="text-xs font-bold text-[#091e42] uppercase tracking-wider flex items-center gap-1.5">
-                      <Layers className="w-3.5 h-3.5 text-[#0052cc]" /> Active Cow Slabs
+                      <Layers className="w-3.5 h-3.5 text-[#0052cc]" /> {t('landing', 'activeCowSlabs')}
                     </div>
                     <span className="text-[10px] text-green-700 font-bold px-2 py-0.5 bg-green-50 border border-green-200 rounded">Cow Rate Chart</span>
                   </div>
@@ -521,9 +528,9 @@ export default function LandingPage() {
                     <table className="w-full text-left text-xs border-collapse">
                       <thead>
                         <tr className="border-b border-gray-200 text-gray-400 text-[10px] font-bold uppercase">
-                          <th className="py-2">Fat Range</th>
-                          <th className="py-2">SNF Range</th>
-                          <th className="py-2 text-right">Price per Litre</th>
+                          <th className="py-2">{t('landing', 'fatRange')}</th>
+                          <th className="py-2">{t('landing', 'snfRange')}</th>
+                          <th className="py-2 text-right">{t('landing', 'pricePerLitre')}</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-gray-100 text-gray-700">
@@ -562,23 +569,23 @@ export default function LandingPage() {
                 {/* Left explanation */}
                 <div className="lg:col-span-5 space-y-4">
                   <h3 className="text-2xl font-display font-bold text-[#091e42] leading-snug">
-                    Cattle feed inventory and credit sales linking
+                    {t('landing', 'feedInventoryTitle')}
                   </h3>
                   <p className="text-sm text-gray-500 leading-relaxed font-medium">
-                    Dairy centers can buy cattle feed in bulk from suppliers and sell bags of feed directly to registered farmers, booking the sales amount directly to the farmer's billing sheet.
+                    {t('landing', 'feedInventoryDesc')}
                   </p>
                   <ul className="space-y-2 text-xs text-gray-500">
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Track bulk inventory and purchase pricing logs.</span>
+                      <span>{t('landing', 'trackBulkInventory')}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Record customer feed sales with credit/cash options.</span>
+                      <span>{t('landing', 'recordCustomerFeed')}</span>
                     </li>
                     <li className="flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-green-600 shrink-0" />
-                      <span>Linked with customer accounts to deduct from final payouts.</span>
+                      <span>{t('landing', 'linkedWithAccounts')}</span>
                     </li>
                   </ul>
                 </div>
@@ -587,14 +594,14 @@ export default function LandingPage() {
                 <div className="lg:col-span-7 bg-white border border-[#dfe1e6] rounded-xl p-4 shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-gray-150 mb-3">
                     <div className="text-xs font-bold text-[#091e42] uppercase tracking-wider flex items-center gap-1.5">
-                      <ShoppingBag className="w-3.5 h-3.5 text-[#0052cc]" /> Book Feed Sale to Farmer
+                      <ShoppingBag className="w-3.5 h-3.5 text-[#0052cc]" /> {t('landing', 'bookFeedSale')}
                     </div>
-                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">Stock: 82 Bags left</span>
+                    <span className="text-[10px] text-gray-400 font-bold uppercase tracking-wider">{t('landing', 'stockLeft')}: 82 Bags left</span>
                   </div>
 
                   <div className="space-y-3.5 text-xs">
                     <div>
-                      <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Item Name</span>
+                      <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('landing', 'itemName')}</span>
                       <span className="block mt-1 font-semibold text-[#091e42] bg-[#fafbfc] border border-[#dfe1e6] rounded-lg p-2">
                         Kapila Super Feed (50kg Bag)
                       </span>
@@ -602,13 +609,13 @@ export default function LandingPage() {
 
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Quantity</span>
+                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('landing', 'quantity')}</span>
                         <span className="block mt-1 font-bold text-[#091e42] bg-[#fafbfc] border border-[#dfe1e6] rounded-lg p-1.5 text-center">
                           2 Bags
                         </span>
                       </div>
                       <div>
-                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">Price per Bag</span>
+                        <span className="block text-[10px] font-bold text-gray-400 uppercase tracking-wider">{t('landing', 'pricePerBag')}</span>
                         <span className="block mt-1 font-bold text-[#091e42] bg-[#fafbfc] border border-[#dfe1e6] rounded-lg p-1.5 text-center">
                           ₹1,600.00
                         </span>
@@ -617,11 +624,11 @@ export default function LandingPage() {
 
                     <div className="border-t border-gray-200 pt-3 flex items-center justify-between text-xs font-semibold">
                       <div>
-                        <span className="text-[10px] text-gray-400 block font-bold uppercase">Charged to Ledger (Credit)</span>
-                        <span className="text-xs text-red-500 font-bold">Yes, auto deduct in bill</span>
+                        <span className="text-[10px] text-gray-400 block font-bold uppercase">{t('landing', 'chargedToLedger')}</span>
+                        <span className="text-xs text-red-500 font-bold">{t('landing', 'yesAutoDeduct')}</span>
                       </div>
                       <div className="text-right">
-                        <span className="text-[10px] text-gray-400 block font-bold uppercase">Total Sale</span>
+                        <span className="text-[10px] text-gray-400 block font-bold uppercase">{t('landing', 'totalSale')}</span>
                         <span className="text-base font-extrabold text-[#091e42]">₹3,200.00</span>
                       </div>
                     </div>
@@ -644,10 +651,10 @@ export default function LandingPage() {
           
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-3xl font-display font-bold text-[#091e42]">
-              Built specifically for dairy chilling hubs and cooperatives
+              {t('landing', 'whyChooseUsTitle')}
             </h2>
             <p className="mt-4 text-sm text-[#505f79] font-medium">
-              Legacy systems rely on registers, calculator errors, and high disputes. LactoFlow centralizes pricing rules, entries, advances, and payments in one click.
+              {t('landing', 'whyChooseUsDesc')}
             </p>
           </div>
 
@@ -658,9 +665,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 rounded-xl bg-[#deebff] flex items-center justify-center text-[#0052cc] shadow-sm">
                 <Calculator className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-bold text-[#091e42] font-display">Instant Fat-SNF Lookups</h3>
+              <h3 className="text-lg font-bold text-[#091e42] font-display">{t('landing', 'instantFatSnfTitle')}</h3>
               <p className="text-xs text-gray-500 leading-relaxed font-semibold">
-                Zero calculation delay. Add collections and watch LactoFlow automatically calculate the rate from active Cow, Buffalo, or Mixed rate grids based on real-time parameters.
+                {t('landing', 'instantFatSnfDesc')}
               </p>
             </div>
 
@@ -669,9 +676,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 rounded-xl bg-[#deebff] flex items-center justify-center text-[#0052cc] shadow-sm">
                 <Coins className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-bold text-[#091e42] font-display">Advance Deductions</h3>
+              <h3 className="text-lg font-bold text-[#091e42] font-display">{t('landing', 'advanceDeductionsTitle')}</h3>
               <p className="text-xs text-gray-500 leading-relaxed font-semibold">
-                Provide advances or sell cattle feed bags on credit. LactoFlow tracks this balance and automatically deducts the pending advance amount during the next bill cycle settlement.
+                {t('landing', 'advanceDeductionsDesc')}
               </p>
             </div>
 
@@ -680,9 +687,9 @@ export default function LandingPage() {
               <div className="w-10 h-10 rounded-xl bg-[#deebff] flex items-center justify-center text-[#0052cc] shadow-sm">
                 <CreditCard className="w-5 h-5" />
               </div>
-              <h3 className="text-lg font-bold text-[#091e42] font-display">Payment Settle Wizard</h3>
+              <h3 className="text-lg font-bold text-[#091e42] font-display">{t('landing', 'paymentSettleWizardTitle')}</h3>
               <p className="text-xs text-gray-500 leading-relaxed font-semibold">
-                Generate bills weekly, biweekly, or monthly. Calculate gross milk value, subtract feeds and cash loans, generate receipts, and settle via bank transfers in a single click.
+                {t('landing', 'paymentSettleWizardDesc')}
               </p>
             </div>
 
@@ -700,13 +707,13 @@ export default function LandingPage() {
             <div className="w-6 h-6 rounded bg-[#0052cc] flex items-center justify-center">
               <Milk className="w-3.5 h-3.5 text-white" />
             </div>
-            <span className="font-bold text-[#091e42]">LactoFlow Dairy Hub</span>
+            <span className="font-bold text-[#091e42]">{t('landing', 'footerBrand')}</span>
           </div>
-          <p>© {new Date().getFullYear()} LactoFlow System. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} {t('landing', 'allRightsReserved')}</p>
           <div className="flex gap-4">
-            <a href="#" className="hover:text-[#091e42] transition">Terms</a>
-            <a href="#" className="hover:text-[#091e42] transition">Privacy</a>
-            <a href="#" className="hover:text-[#091e42] transition">Contact Support</a>
+            <a href="#" className="hover:text-[#091e42] transition">{t('landing', 'terms')}</a>
+            <a href="#" className="hover:text-[#091e42] transition">{t('landing', 'privacy')}</a>
+            <a href="#" className="hover:text-[#091e42] transition">{t('landing', 'support')}</a>
           </div>
         </div>
       </footer>
