@@ -242,7 +242,26 @@ export interface Translations {
     paid: string;
     credit: string;
     noSalesRecorded: string;
-    };
+    addWholesaleDealer: string;
+    dealerCode: string;
+    dealerCodePlaceholder: string;
+    dealerName: string;
+    dealerNamePlaceholder: string;
+    phone: string;
+    phonePlaceholder: string;
+    addressPlaceholder: string;
+    createDealer: string;
+    recordBulkPurchaseTitle: string;
+    wholesaleDealer: string;
+    chooseDealer: string;
+    feedProductName: string;
+    feedProductNamePlaceholder: string;
+    bagsQty: string;
+    buyRateBag: string;
+    sellRateBag: string;
+    purchaseDate: string;
+    logBulkPurchase: string;
+  };
     customer: {
       title: string;
       welcome: string;
@@ -536,6 +555,25 @@ export const translations: Record<Language, Translations> = {
       paid: 'Paid',
       credit: 'Credit',
       noSalesRecorded: 'No sales recorded',
+      addWholesaleDealer: 'Add Wholesale Dealer',
+      dealerCode: 'Dealer Code',
+      dealerCodePlaceholder: 'e.g. DLR-001',
+      dealerName: 'Dealer Name',
+      dealerNamePlaceholder: 'e.g. Vijay Patel',
+      phone: 'Phone',
+      phonePlaceholder: '9876543210',
+      addressPlaceholder: 'Address',
+      createDealer: 'Create Dealer',
+      recordBulkPurchaseTitle: 'Record Bulk Stock Purchase',
+      wholesaleDealer: 'Wholesale Dealer',
+      chooseDealer: '-- Choose Dealer --',
+      feedProductName: 'Feed Product Name',
+      feedProductNamePlaceholder: 'e.g. Kapila Super Feed 50kg',
+      bagsQty: 'Bags Qty',
+      buyRateBag: 'Buy Rate/Bag (₹)',
+      sellRateBag: 'Sell Rate/Bag (₹)',
+      purchaseDate: 'Purchase Date',
+      logBulkPurchase: 'Log Bulk Purchase',
     },
     customer: {
       title: 'Farmer Accounts',
@@ -828,6 +866,25 @@ export const translations: Record<Language, Translations> = {
       paid: 'नकद',
       credit: 'उधार',
       noSalesRecorded: 'कोई बिक्री दर्ज नहीं की गई',
+      addWholesaleDealer: 'थोक डीलर जोड़ें',
+      dealerCode: 'डीलर कोड',
+      dealerCodePlaceholder: 'उदा. DLR-001',
+      dealerName: 'डीलर का नाम',
+      dealerNamePlaceholder: 'उदा. विजय पटेल',
+      phone: 'फोन नंबर',
+      phonePlaceholder: '9876543210',
+      addressPlaceholder: 'पता',
+      createDealer: 'डीलर बनाएं',
+      recordBulkPurchaseTitle: 'थोक स्टॉक खरीद दर्ज करें',
+      wholesaleDealer: 'थोक डीलर',
+      chooseDealer: '-- डीलर चुनें --',
+      feedProductName: 'पशु आहार उत्पाद का नाम',
+      feedProductNamePlaceholder: 'उदा. कपिला सुपर फीड 50 किग्रा',
+      bagsQty: 'बोरी मात्रा',
+      buyRateBag: 'खरीद दर/बोरी (₹)',
+      sellRateBag: 'बिक्री दर/बोरी (₹)',
+      purchaseDate: 'खरीद की तारीख',
+      logBulkPurchase: 'थोक खरीद दर्ज करें',
     },
     customer: {
       title: 'किसान खाते',
@@ -1120,6 +1177,25 @@ export const translations: Record<Language, Translations> = {
       paid: 'रोख',
       credit: 'उधारी',
       noSalesRecorded: 'कोणतीही विक्री नोंदवलेली नाही',
+      addWholesaleDealer: 'घाऊक विक्रेता जोडा',
+      dealerCode: 'डीलर कोड',
+      dealerCodePlaceholder: 'उदा. DLR-001',
+      dealerName: 'डीलरचे नाव',
+      dealerNamePlaceholder: 'उदा. विजय पटेल',
+      phone: 'फोन नंबर',
+      phonePlaceholder: '9876543210',
+      addressPlaceholder: 'पत्ता',
+      createDealer: 'डीलर तयार करा',
+      recordBulkPurchaseTitle: 'घाऊक पशूखाद्य खरेदी नोंदवा',
+      wholesaleDealer: 'घाऊक विक्रेता',
+      chooseDealer: '-- डीलर निवडा --',
+      feedProductName: 'पशूखाद्य उत्पादनाचे नाव',
+      feedProductNamePlaceholder: 'उदा. कपिला सुपर फीड ५० किलो',
+      bagsQty: 'पोती प्रमाण',
+      buyRateBag: 'खरेदी दर/पोते (₹)',
+      sellRateBag: 'विक्री दर/पोते (₹)',
+      purchaseDate: 'खरेदीची तारीख',
+      logBulkPurchase: 'घाऊक खरेदी नोंदवा',
     },
     customer: {
       title: 'शेतकरी खाती',

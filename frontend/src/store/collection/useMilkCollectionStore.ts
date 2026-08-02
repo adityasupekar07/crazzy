@@ -1,7 +1,5 @@
 import { create } from 'zustand';
 import { request } from '../../utils/api';
-import { calculateRate } from '../../utils/calculations/rateCalculations';
-import { useRateChartStore } from '../rate-chart/useRateChartStore';
 import type { StoreStatus } from '../utils/asyncHelper';
 
 export interface MilkEntry {
@@ -29,6 +27,9 @@ export interface CreateMilkEntryInput {
   shift: 'MORNING' | 'EVENING';
   customerName: string;
   customerId: string;
+  rate?: number;
+  totalAmount?: number;
+  rateChartId?: string;
 }
 
 export interface MilkCollectionState {
@@ -96,10 +97,6 @@ export const useMilkCollectionStore = create<MilkCollectionState>((set, get) => 
   createCollectionEntry: async (entry) => {
     set({ status: 'loading', error: null });
     try {
-      const rateCharts = useRateChartStore.getState().rateCharts;
-      const { rate } = calculateRate(rateCharts, entry.milkType, entry.fat, entry.snf);
-      const totalAmount = Number((entry.quantity * rate).toFixed(2));
-
       const res: any = await request('/milk/milk-entry', 'POST', {
         customerCode: String(entry.customerCode),
         code: Number(entry.customerCode),
@@ -108,8 +105,9 @@ export const useMilkCollectionStore = create<MilkCollectionState>((set, get) => 
         quantity: Number(entry.quantity),
         fat: Number(entry.fat),
         snf: Number(entry.snf),
-        rate,
-        totalAmount,
+        rate: entry.rate,
+        totalAmount: entry.totalAmount,
+        rateChartId: entry.rateChartId,
       });
 
       let newDateStr = new Date().toISOString().split('T')[0];
@@ -125,8 +123,8 @@ export const useMilkCollectionStore = create<MilkCollectionState>((set, get) => 
         quantity: res.quantity,
         fat: res.fat ?? entry.fat,
         snf: res.snf ?? entry.snf,
-        rate: res.rate ?? rate,
-        totalAmount: res.totalAmount ?? totalAmount,
+        rate: res.rate ?? entry.rate ?? 0,
+        totalAmount: res.totalAmount ?? entry.totalAmount ?? 0,
         customerId: res.customerId,
         customerName: entry.customerName,
         customerCode: entry.customerCode,

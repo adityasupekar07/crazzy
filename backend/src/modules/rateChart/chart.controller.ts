@@ -3,196 +3,134 @@
 // ================================
 
 import { Request, Response } from "express";
-
 import asyncHandler from "../../utils/asyncHandler.js";
-
 import ApiResponse from "../../utils/ApiResponse.js";
-
 import { RateChartService } from "./chart.service.js";
 
 /**
- * CREATE
+ * CREATE DRAFT CHART
  */
+const createRateChart = asyncHandler(async (req: Request, res: Response) => {
+  const adminId = req.user.id;
+  const result = await RateChartService.createRateChart(adminId, req.body);
 
-const createRateChart = asyncHandler(
-  async (
-    req: Request,
-    res: Response
-  ) => {
-
-    const adminId =
-      req.user.id;
-
-    const result =
-      await RateChartService.createRateChart(
-        adminId,
-        req.body
-      );
-
-    res.status(201).json(
-      new ApiResponse(
-        201,
-        
-        "Rate chart created",
-         result,
-      )
-    );
-  }
-);
+  res.status(201).json(new ApiResponse(201, "Rate chart created in DRAFT status", result));
+});
 
 /**
- * GET ALL
+ * GET ALL CHARTS (PAGINATED & FILTERED)
  */
+const getAllCharts = asyncHandler(async (req: Request, res: Response) => {
+  const adminId = req.user.id;
+  const result = await RateChartService.getAllCharts(adminId, req.query);
 
-const getAllCharts = asyncHandler(
-  async (
-    req: Request,
-    res: Response
-  ) => {
-
-    const adminId =
-      req.user.id;
-
-    const result =
-      await RateChartService.getAllCharts(
-        adminId
-      );
-    res.status(200).json(
-      new ApiResponse(
-        200,
-       
-        "Charts fetched",
-         result
-      )
-    );
-  }
-);
+  res.status(200).json(new ApiResponse(200, "Rate charts fetched successfully", result));
+});
 
 /**
- * GET ACTIVE
+ * GET ACTIVE CHART
  */
+const getActiveChart = asyncHandler(async (req: Request, res: Response) => {
+  const adminId = req.user.id;
+  const { milkType, method, chartType } = req.query;
 
-const getActiveChart = asyncHandler(
-  async (
-    req: Request,
-    res: Response
-  ) => {
+  const result = await RateChartService.getActiveChart(
+    adminId,
+    milkType as string,
+    method as string,
+    chartType as string
+  );
 
-    const adminId =
-      req.user.id;
-
-    const {
-      milkType,
-      category,
-      method,
-    } = req.query;
-
-    const result =
-      await RateChartService.getActiveChart(
-        adminId,
-        milkType as string,
-        category as string,
-        method as string
-      );
-
-    res.status(200).json(
-      new ApiResponse(
-        200,
-
-        "Active chart fetched",
-                result
-      )
-    );
-  }
-);
+  res.status(200).json(new ApiResponse(200, "Active rate chart fetched successfully", result));
+});
 
 /**
- * GET SINGLE
+ * GET SINGLE CHART
  */
+const getSingleChart = asyncHandler(async (req: Request, res: Response) => {
+  const result = await RateChartService.getSingleChart(req.params.id as string);
 
-const getSingleChart = asyncHandler(
-  async (
-    req: Request,
-    res: Response
-  ) => {
-
-    const result =
-      await RateChartService.getSingleChart(
-        req.params.id as string
-      );
-
-    res.status(200).json(
-      new ApiResponse(
-        200,
-        
-        "Chart fetched",
-        result
-      )
-    );
-  }
-);
+  res.status(200).json(new ApiResponse(200, "Rate chart fetched successfully", result));
+});
 
 /**
- * UPDATE
+ * UPDATE DRAFT CHART
  */
+const updateChart = asyncHandler(async (req: Request, res: Response) => {
+  const adminId = req.user.id;
+  const result = await RateChartService.updateChart(req.params.id as string, adminId, req.body);
 
-const updateChart = asyncHandler(
-  async (
-    req: Request,
-    res: Response
-  ) => {
-
-    const result =
-      await RateChartService.updateChart(
-        req.params.id as string,
-        req.body
-      );
-
-    res.status(200).json(
-      new ApiResponse(
-        200,
-       
-        "Chart updated",
-         result
-      )
-    );
-  }
-);
+  res.status(200).json(new ApiResponse(200, "Rate chart updated successfully", result));
+});
 
 /**
- * DELETE
+ * DELETE DRAFT CHART
  */
+const deleteChart = asyncHandler(async (req: Request, res: Response) => {
+  const adminId = req.user.id;
+  await RateChartService.deleteChart(req.params.id as string, adminId);
 
-const deleteChart = asyncHandler(
-  async (
-    req: Request,
-    res: Response
-  ) => {
+  res.status(200).json(new ApiResponse(200, "Rate chart deleted successfully", null));
+});
 
-    await RateChartService.deleteChart(
-      req.params.id as string
-    );
+/**
+ * ACTIVATE CHART
+ */
+const activateChart = asyncHandler(async (req: Request, res: Response) => {
+  const adminId = req.user.id;
+  const result = await RateChartService.activateChart(req.params.id as string, adminId);
 
-    res.status(200).json(
-      new ApiResponse(
-        200,
-        "null",
-        "Chart deleted"
-      )
-    );
-  }
-);
+  res.status(200).json(new ApiResponse(200, "Rate chart activated successfully", result));
+});
+
+/**
+ * CLONE CHART
+ */
+const cloneChart = asyncHandler(async (req: Request, res: Response) => {
+  const adminId = req.user.id;
+  const result = await RateChartService.cloneChart(req.params.id as string, adminId);
+
+  res.status(201).json(new ApiResponse(201, "Rate chart cloned as DRAFT successfully", result));
+});
+
+/**
+ * PREVIEW CALCULATION (PURE MEMORY)
+ */
+const previewChart = asyncHandler(async (req: Request, res: Response) => {
+  const result = await RateChartService.previewChart(req.body);
+
+  res.status(200).json(new ApiResponse(200, "Rate calculation preview generated", result));
+});
+
+/**
+ * VALIDATE EXCEL MATRIX (PURE MEMORY)
+ */
+const validateExcel = asyncHandler(async (req: Request, res: Response) => {
+  const result = await RateChartService.validateExcel(req.body);
+
+  res.status(200).json(new ApiResponse(200, "Excel matrix validated", result));
+});
+
+/**
+ * CALCULATE RATE FOR ACTIVE CHART
+ */
+const calculateRate = asyncHandler(async (req: Request, res: Response) => {
+  const adminId = req.user.id;
+  const result = await RateChartService.calculateLiveRate(adminId, req.body);
+
+  res.status(200).json(new ApiResponse(200, "Rate calculated successfully", result));
+});
 
 export const RateChartController = {
   createRateChart,
-
   getAllCharts,
-
   getActiveChart,
-
   getSingleChart,
-
   updateChart,
-
   deleteChart,
+  activateChart,
+  cloneChart,
+  previewChart,
+  validateExcel,
+  calculateRate,
 };

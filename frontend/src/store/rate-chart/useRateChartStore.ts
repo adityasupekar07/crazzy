@@ -76,8 +76,9 @@ export const useRateChartStore = create<RateChartState>((set, get) => ({
   fetchRateCharts: async () => {
     set({ status: 'loading', error: null });
     try {
-      const data = await request<RateChart[]>('/rate-chart/all');
-      set({ rateCharts: data ?? [], status: 'success' });
+      const data = await request<any>('/rate-chart');
+      const chartsList = Array.isArray(data) ? data : (data?.items ?? []);
+      set({ rateCharts: chartsList, status: 'success' });
     } catch (err: any) {
       console.error('Failed to fetch rate charts:', err.message);
       set({ rateCharts: [], status: 'error', error: err.message });

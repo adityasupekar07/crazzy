@@ -36,11 +36,15 @@ router.use(
     milkEntryRoutes
 );
 router.use(
+    "/rate-charts",
+    rateChartRoutes
+);
+router.use(
     "/rate-chart",
     rateChartRoutes
 );
 
-router.use(
+router.use( 
     "/food-dealers",
 
     foodDealerRoutes

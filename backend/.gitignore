@@ -1,6 +1,8 @@
 node_modules/
 logs/
 uploads/
-.env
+
 dist/
 build/
+firebase-service-account.json
+.env

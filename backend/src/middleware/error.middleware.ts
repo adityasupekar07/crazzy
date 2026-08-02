@@ -18,7 +18,21 @@ const globalErrorHandler = (
      * =====================================================
      */
 
-    if (!(error instanceof ApiError)) {
+    /**
+     * =====================================================
+     * PRISMA UNIQUE CONSTRAINT ERROR (P2002)
+     * =====================================================
+     */
+    if (err.code === "P2002") {
+        error = new ApiError(
+            409,
+            "Duplicate entry: a record with these unique details already exists.",
+            {
+                code: "DUPLICATE_ENTRY",
+                errors: err.meta?.target || [],
+            }
+        );
+    } else if (!(error instanceof ApiError)) {
         error = new ApiError(
             err.statusCode || 500,
 

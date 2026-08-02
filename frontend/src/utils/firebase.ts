@@ -6,25 +6,24 @@ import {
   type ConfirmationResult,
 } from 'firebase/auth';
 
-/**
- * Firebase project config for phone-dairy-a4089.
- * Must match the backend firebase-service-account.json project.
- */
+// Firebase configuration
 const firebaseConfig = {
-  apiKey: 'AIzaSyAWISyz5F_iZQ1M9XxCuNzdwCToFOEy0CA',
-  authDomain: 'phone-dairy-a4089.firebaseapp.com',
-  projectId: 'phone-dairy-a4089',
-  storageBucket: 'phone-dairy-a4089.firebasestorage.app',
-  messagingSenderId: '1029722857655',
-  appId: '1:1029722857655:web:351984065949c1f2276d32',
+  apiKey: 'AIzaSyDDv8QjM_l8KL3dmfRJLDkj4qyCGTGmKQ8',
+  authDomain: 'mobile-dairy-5a09a.firebaseapp.com',
+  projectId: 'mobile-dairy-5a09a',
+  storageBucket: 'mobile-dairy-5a09a.firebasestorage.app',
+  messagingSenderId: '984926042103',
+  appId: '1:984926042103:web:e9cec760d40ae383eae0f2',
+  measurementId: 'G-3PJ5PEZXM1', // optional
 };
 
-// Prevent re-initialization in HMR / StrictMode
+// Prevent re-initialization
 const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
+
 export const auth = getAuth(app);
 
 // -----------------------------------------------------------------------
-// Singleton RecaptchaVerifier — created once per session, cleared on error
+// Singleton RecaptchaVerifier
 // -----------------------------------------------------------------------
 let recaptchaVerifier: RecaptchaVerifier | null = null;
 
@@ -34,7 +33,7 @@ function getRecaptchaVerifier(): RecaptchaVerifier {
   recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
     size: 'invisible',
     callback: () => {
-      // reCAPTCHA solved — nothing to do, Firebase handles it internally
+      console.log('reCAPTCHA solved');
     },
     'expired-callback': () => {
       clearRecaptchaVerifier();
@@ -51,18 +50,15 @@ export function clearRecaptchaVerifier() {
   }
 }
 
-/**
- * Send OTP to the given phone number (must include country code, e.g. +919876543210).
- * Returns a ConfirmationResult that you must call .confirm(otp) on.
- */
-export async function sendPhoneOtp(phoneNumber: string): Promise<ConfirmationResult> {
+export async function sendPhoneOtp(
+  phoneNumber: string
+): Promise<ConfirmationResult> {
   const verifier = getRecaptchaVerifier();
+
   try {
-    const confirmationResult = await signInWithPhoneNumber(auth, phoneNumber, verifier);
-    return confirmationResult;
-  } catch (err) {
-    // Clear the verifier so a fresh one is created on retry
+    return await signInWithPhoneNumber(auth, phoneNumber, verifier);
+  } catch (error) {
     clearRecaptchaVerifier();
-    throw err;
+    throw error;
   }
 }

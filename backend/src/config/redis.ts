@@ -18,6 +18,15 @@ export const redis: RedisClientType =
     url:
       process.env.REDIS_URL ??
       "redis://127.0.0.1:6379",
+    socket: {
+      reconnectStrategy(retries) {
+        if (retries > 1) {
+          return false; // Stop retrying if Redis is offline
+        }
+        return 500;
+      },
+    },
+    
   });
 
 let connected = false;
@@ -67,12 +76,10 @@ redis.on(
 redis.on(
   "error",
   (error) => {
-    connected = false;
-
-    logger.error(
-      "Redis client error",
-      { error }
-    );
+    if (connected) {
+      connected = false;
+      logger.warn("Redis connection lost:", { error: error.message || error });
+    }
   }
 );
 

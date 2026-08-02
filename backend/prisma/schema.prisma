@@ -184,6 +184,10 @@ model MilkEntry {
 
   customer Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
 
+  rateChartId String?
+
+  rateChart RateChart? @relation(fields: [rateChartId], references: [id], onDelete: SetNull)
+
   /**
    * TIMESTAMPS
    */
@@ -367,6 +371,8 @@ model RateChart {
   snfSteps SnfStep[]
 
   rules BonusPenaltyRule[]
+
+  milkEntries MilkEntry[]
 
   /**
    * TIMESTAMPS

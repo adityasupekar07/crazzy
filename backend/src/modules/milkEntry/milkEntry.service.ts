@@ -194,246 +194,103 @@ const getSingleMilkEntry =
 // CREATE MILK ENTRY
 // ========================================
 
-const createMilkEntry =
-  async (
-    adminId: string,
-    payload: any
-  ) => {
+const createMilkEntry = async (adminId: string, payload: any) => {
+  logger.info("[SERVICE START] createMilkEntry", { adminId, payload });
 
-    /**
-     * VALIDATION
-     */
+  /**
+   * VALIDATION
+   */
+  if (!payload.code) {
+    logger.warn("CUSTOMER CODE MISSING");
+    throw new ApiError(400, "Customer code is required");
+  }
 
-    if (!payload.code) {
+  /**
+   * FIND CUSTOMER USING ADMIN ID + CODE
+   */
+  const customer = await prisma.customer.findFirst({
+    where: {
+      adminId,
+      code: payload.code,
+    },
+  });
 
-      logger.warn(
-        "CUSTOMER CODE MISSING"
-      );
+  if (!customer) {
+    logger.warn("CUSTOMER NOT FOUND", { adminId, code: payload.code });
+    throw new ApiError(404, "Customer not found");
+  }
 
-      throw new ApiError(
-        400,
-        "Customer code is required"
-      );
-    }
+  const entryDate = getTodayStart();
 
-    /**
-     * FIND CUSTOMER
-     * USING ADMIN ID + CODE
-     */
+  /**
+   * CHECK EXISTING ENTRY SAME DATE + SHIFT
+   */
+  logger.info("[BEFORE DUPLICATE CHECK]", { customerId: customer.id, shift: payload.shift });
 
-    const customer =
-      await prisma.customer.findFirst({
-        where: {
-          adminId,
+  const existingEntry = await prisma.milkEntry.findFirst({
+    where: {
+      customerId: customer.id,
+      shift: payload.shift,
+      date: {
+        gte: getTodayStart(),
+        lte: getTodayEnd(),
+      },
+    },
+  });
 
-          code:
-            payload.code,
-        },
-      });
+  if (existingEntry) {
+    logger.warn("ENTRY ALREADY EXISTS", { customerId: customer.id, shift: payload.shift });
+    throw new ApiError(400, `Entry for ${payload.shift} shift already exists on this date`);
+  }
 
-    /**
-     * CUSTOMER NOT FOUND
-     */
+  logger.info("[AFTER DUPLICATE CHECK - PASSED]");
 
-    if (!customer) {
+  /**
+   * CREATE ENTRY IN POSTGRESQL DB
+   */
+  const newEntry = await prisma.milkEntry.create({
+    data: {
+      customerId: customer.id,
+      date: entryDate,
+      shift: payload.shift,
+      milkType: payload.milkType,
+      quantity: payload.quantity,
+      fat: payload.fat,
+      snf: payload.snf,
+      rate: payload.rate,
+      totalAmount: payload.totalAmount,
+    },
+    include: {
+      customer: true,
+    },
+  });
 
-      logger.warn(
-        "CUSTOMER NOT FOUND",
-        {
-          adminId,
+  logger.info("[AFTER DB CREATE - SUCCESS]", { entryId: newEntry.id, customerId: customer.id });
 
-          code:
-            payload.code,
-        }
-      );
-
-      throw new ApiError(
-        404,
-        "Customer not found"
-      );
-    }
-
-    /**
-     * DATE
-     */
-
-    const entryDate = getTodayStart();
-    //   new Date(
-    //     payload.date
-    //   );
-
-    /**
-     * CHECK EXISTING ENTRY
-     * SAME DATE + SHIFT
-     */
-
-    const existingEntry =
-      await prisma.milkEntry.findFirst({
-        where: {
-
-          customerId:
-            customer.id,
-
-          shift:
-            payload.shift,
-          date: {
-            gte: getTodayStart(),
-            lte: getTodayEnd(),
-          },
-        },
-      });
-
-    /**
-     * ALREADY EXISTS
-     */
-
-    if (existingEntry) {
-
-      logger.warn(
-        "ENTRY ALREADY EXISTS",
-        {
-          customerId:
-            customer.id,
-
-          date:
-            payload.date,
-
-          shift:
-            payload.shift,
-        }
-      );
-
-      throw new ApiError(
-        400,
-        `Entry for ${payload.shift} shift already exists on this date`
-      );
-    }
-
-    /**
-     * CREATE ENTRY
-     */
-
-    const newEntry =
-      await prisma.milkEntry.create({
-        data: {
-
-          customerId:
-            customer.id,
-
-          date:
-            entryDate,
-
-          shift:
-            payload.shift,
-
-          milkType:
-            payload.milkType,
-
-          quantity:
-            payload.quantity,
-
-          fat:
-            payload.fat,
-
-          snf:
-            payload.snf,
-
-          rate:
-            payload.rate,
-
-          totalAmount:
-            payload.totalAmount,
-        },
-
-        include: {
-          customer: true,
-        },
-      });
-
-    logger.info(
-      "MILK ENTRY CREATED",
-      {
-        entryId:
-          newEntry.id,
-
-        customerId:
-          customer.id,
-
-        code:
-          customer.code,
-
-        adminId,
-      }
-    );
-
-    /**
-     * TODAY DATE
-     */
-
-    const today =
-      getTodayDate();
-
-    /**
-     * CACHE KEY
-     */
-
-    const cacheKey =
-      cacheKeys.todayMilkEntries(
-        adminId,
-        today
-      );
-
-    /**
-     * GET CACHE
-     */
-
-    const cachedEntries =
-      await cache.get<any[]>(
-        cacheKey
-      );
-
-    /**
-     * UPDATE CACHE
-     */
+  /**
+   * CACHE UPDATES (NON-BLOCKING FAIL-SAFE)
+   */
+  logger.info("[BEFORE CACHE OPERATIONS]");
+  try {
+    const today = getTodayDate();
+    const cacheKey = cacheKeys.todayMilkEntries(adminId, today);
+    const cachedEntries = await cache.get<any[]>(cacheKey);
 
     if (cachedEntries) {
-
-      logger.info(
-        "UPDATING TODAY ENTRIES CACHE",
-        {
-          cacheKey,
-        }
-      );
-
-      /**
-       * ADD NEW ENTRY
-       */
-
-      cachedEntries.unshift(
-        newEntry
-      );
-
-      /**
-       * SAVE UPDATED CACHE
-       */
-
-      await cache.set(
-        cacheKey,
-        cachedEntries,
-        TODAY_ENTRIES_CACHE_TTL
-      );
+      logger.info("UPDATING TODAY ENTRIES CACHE", { cacheKey });
+      cachedEntries.unshift(newEntry);
+      await cache.set(cacheKey, cachedEntries, TODAY_ENTRIES_CACHE_TTL);
     }
 
-    /**
-     * CLEAR DAYWISE CACHE
-     */
+    await cache.clearPattern(`milk-entries-by-date:${adminId}:*`);
+    logger.info("[AFTER CACHE OPERATIONS - SUCCESS]");
+  } catch (cacheErr) {
+    logger.warn("[CACHE OPERATIONS FAILED - GRACEFULLY IGNORED]", { error: cacheErr });
+  }
 
-    await cache.clearPattern(
-      `milk-entries-by-date:${adminId}:*`
-    );
-
-    return newEntry;
-  };
+  logger.info("[BEFORE RETURN - SUCCESS]", { entryId: newEntry.id });
+  return newEntry;
+};
 /**
  * ========================================
  * UPDATE ENTRY

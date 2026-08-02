@@ -27,10 +27,11 @@ const initialDashboardData = {
   error: null,
 };
 
-export const useDashboardStore = create<DashboardState>((set) => ({
+export const useDashboardStore = create<DashboardState>((set, get) => ({
   ...initialDashboardData,
 
-  fetchDashboard: async () => {
+  fetchDashboard: async (force = false) => {
+    if (!force && get().status === 'loading') return;
     set({ status: 'loading', error: null });
     try {
       const data = await request<DashboardStats>('/admin/dashboard');

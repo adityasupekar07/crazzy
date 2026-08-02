@@ -11,26 +11,20 @@ import { milkEntryService } from "./milkEntry.service.js";
  * =====================================================
  */
 
-export const addMilkEntry =
-    asyncHandler(
-        async (req, res) => {
-            console.log("Adding milk entry with payload:", req.body);
-            const result =
-                await milkEntryService.createMilkEntry(
-                    req.user.id,
-                    req.body
+export const addMilkEntry = asyncHandler(async (req, res) => {
+    console.log("====== ADD MILK ENTRY ======");
+    console.log("Time:", new Date().toISOString());
+    console.log("Body:", req.body);
 
-                );
-
-            return res.status(201).json(
-                new ApiResponse(
-                    201,
-                    "Milk entry added successfully",
-                    result
-                )
-            );
-        }
+    const result = await milkEntryService.createMilkEntry(
+        req.user.id,
+        req.body
     );
+
+    return res.status(201).json(
+        new ApiResponse(201, "Milk entry added successfully", result)
+    );
+});
 
 /**
  * =====================================================
