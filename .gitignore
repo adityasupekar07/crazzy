@@ -19,6 +19,7 @@ frontend/dist/
 *.log
 logs/
 backend/logs/
+backend/data/
 
 # Firebase private keys
 firebase-service-account.json
