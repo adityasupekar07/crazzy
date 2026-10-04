@@ -492,8 +492,9 @@ export default function Dashboard() {
   const avgSnf = billingCollections.length
     ? Number((billingCollections.reduce((sum, c) => sum + c.snf, 0) / billingCollections.length).toFixed(2))
     : 0;
-  const billingDeductionAmt = Number(billingAdvanceDeduction) || 0;
-  const billingNetPayable = Number((billingTotalGross - billingDeductionAmt).toFixed(2));
+  const maxBillingDeductible = Math.min(billingTotalGross, customerSummary?.summary?.totalPending || 0);
+  const billingDeductionAmt = Math.min(maxBillingDeductible, Math.max(0, Number(billingAdvanceDeduction) || 0));
+  const billingNetPayable = Number(Math.max(0, billingTotalGross - billingDeductionAmt).toFixed(2));
 
   const filteredFarmers = farmers.filter(f =>
     f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -812,13 +813,28 @@ export default function Dashboard() {
       alert('No collections to settle for this period.');
       return;
     }
+    const deduction = Number(billingAdvanceDeduction) || 0;
+    if (deduction < 0) {
+      alert('Advance deduction cannot be negative.');
+      return;
+    }
+    if (deduction > billingTotalGross) {
+      alert(`Advance deduction (₹${deduction}) cannot exceed gross milk amount (₹${billingTotalGross.toFixed(2)}).`);
+      return;
+    }
+    const pendingAdv = customerSummary?.summary?.totalPending || 0;
+    if (deduction > pendingAdv) {
+      alert(`Advance deduction (₹${deduction}) cannot exceed farmer's pending advance balance (₹${pendingAdv.toFixed(2)}).`);
+      return;
+    }
+
     const success = await createSettlement({
       customerId: targetBillingFarmer.id,
       startDate: billingStartDate,
       endDate: billingEndDate,
       totalAmount: billingTotalGross,
       netPayable: billingNetPayable,
-      advanceDeductionAmount: Number(billingAdvanceDeduction) || 0,
+      advanceDeductionAmount: deduction,
       litres: billingTotalQty,
       avgFat,
       avgSnf,
@@ -1903,12 +1919,42 @@ export default function Dashboard() {
                     </div>
                     {customerSummary && customerSummary.summary.totalPending > 0 && (
                       <div className="py-2 border-y border-gray-200 mt-2">
-                        <div className="flex justify-between items-center mb-2">
-                          <span className="text-amber-600 font-semibold text-[10px]">Pending Advance: ₹{customerSummary.summary.totalPending.toFixed(2)}</span>
+                        <div className="flex justify-between items-center mb-1.5">
+                          <span className="text-amber-600 font-semibold text-[10px]">
+                            Pending Advance: ₹{customerSummary.summary.totalPending.toFixed(2)}
+                          </span>
+                          <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded font-medium">
+                            Max Deductible: ₹{maxBillingDeductible.toFixed(2)}
+                          </span>
                         </div>
                         <div className="flex justify-between items-center">
                           <span className="text-gray-500">Advance Deduction</span>
-                          <input type="number" max={customerSummary.summary.totalPending} value={billingAdvanceDeduction} onChange={(e) => setBillingAdvanceDeduction(e.target.value)} placeholder="0.00" className="w-24 light-input rounded py-1 px-2 text-right text-[10px]" />
+                          <input
+                            type="number"
+                            min="0"
+                            max={maxBillingDeductible}
+                            step="0.01"
+                            value={billingAdvanceDeduction}
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              if (val === '') {
+                                setBillingAdvanceDeduction('');
+                                return;
+                              }
+                              const num = parseFloat(val);
+                              if (!isNaN(num)) {
+                                if (num > maxBillingDeductible) {
+                                  setBillingAdvanceDeduction(String(maxBillingDeductible));
+                                } else if (num < 0) {
+                                  setBillingAdvanceDeduction('0');
+                                } else {
+                                  setBillingAdvanceDeduction(val);
+                                }
+                              }
+                            }}
+                            placeholder="0.00"
+                            className="w-24 light-input rounded py-1 px-2 text-right text-[10px]"
+                          />
                         </div>
                       </div>
                     )}

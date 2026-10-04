@@ -108,6 +108,47 @@ export const createSettlement = async (
     throw new ApiError(404, 'Customer not found or access denied');
   }
 
+  const grossAmount = Math.max(0, Number(totalAmount) || 0);
+  const requestedDeduction = Number(advanceDeductionAmount) || 0;
+
+  if (requestedDeduction < 0) {
+    throw new ApiError(400, 'Advance deduction cannot be a negative number');
+  }
+
+  // Fetch active advances for this customer
+  const activeAdvances = await prisma.advance.findMany({
+    where: {
+      customerId,
+      adminId,
+      status: { in: ['ACTIVE', 'PARTIALLY_RECOVERED'] },
+    },
+    orderBy: { createdAt: 'asc' },
+  });
+
+  const totalPendingAdvance = activeAdvances.reduce(
+    (sum, adv) => sum + Number(adv.pendingAmount || 0),
+    0
+  );
+
+  // STRICT VALIDATION: Cannot deduct more than gross milk bill amount
+  if (requestedDeduction > grossAmount) {
+    throw new ApiError(
+      400,
+      `Advance deduction (₹${requestedDeduction.toFixed(2)}) cannot exceed the total milk bill amount (₹${grossAmount.toFixed(2)}). Net payable cannot be negative.`
+    );
+  }
+
+  // STRICT VALIDATION: Cannot deduct more than farmer's active pending advance
+  if (requestedDeduction > totalPendingAdvance) {
+    throw new ApiError(
+      400,
+      `Advance deduction (₹${requestedDeduction.toFixed(2)}) cannot exceed the customer's total pending advance (₹${totalPendingAdvance.toFixed(2)})`
+    );
+  }
+
+  const finalDeduction = requestedDeduction;
+  const calculatedNetPayable = Math.max(0, Number((grossAmount - finalDeduction).toFixed(2)));
+
   const record: SettlementRecord = {
     id: `settle_${crypto.randomBytes(8).toString('hex')}`,
     adminId,
@@ -120,9 +161,9 @@ export const createSettlement = async (
     litres: Number(litres) || 0,
     avgFat: Number(avgFat) || 0,
     avgSnf: Number(avgSnf) || 0,
-    grossAmount: Number(totalAmount) || 0,
-    advanceDeductionAmount: Number(advanceDeductionAmount) || 0,
-    netPayable: Number(netPayable) || 0,
+    grossAmount: grossAmount,
+    advanceDeductionAmount: finalDeduction,
+    netPayable: calculatedNetPayable,
     milkEntryCount: milkEntryIds.length,
     milkEntryIds,
     remarks,
@@ -134,17 +175,8 @@ export const createSettlement = async (
   saveStorage(allRecords);
 
   // Process advance deduction if provided
-  if (record.advanceDeductionAmount > 0) {
-    const activeAdvances = await prisma.advance.findMany({
-      where: {
-        customerId,
-        adminId,
-        status: { in: ['ACTIVE', 'PARTIALLY_RECOVERED'] }
-      },
-      orderBy: { createdAt: 'asc' }
-    });
-
-    let remainingDeduction = record.advanceDeductionAmount;
+  if (finalDeduction > 0) {
+    let remainingDeduction = finalDeduction;
     
     for (const adv of activeAdvances) {
       if (remainingDeduction <= 0) break;
@@ -180,7 +212,7 @@ export const createSettlement = async (
     }
   }
 
-  logger.info(`Settlement created: ${record.id} for farmer ${customer.name} (₹${netPayable})`);
+  logger.info(`Settlement created: ${record.id} for farmer ${customer.name} (Gross: ₹${grossAmount}, Deduction: ₹${finalDeduction}, Net: ₹${calculatedNetPayable})`);
   return record;
 };
 
