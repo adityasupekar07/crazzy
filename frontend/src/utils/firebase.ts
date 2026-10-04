@@ -45,7 +45,11 @@ function getRecaptchaVerifier(): RecaptchaVerifier {
 
 export function clearRecaptchaVerifier() {
   if (recaptchaVerifier) {
-    recaptchaVerifier.clear();
+    try {
+      recaptchaVerifier.clear();
+    } catch (e) {
+      console.warn('Error clearing reCAPTCHA verifier:', e);
+    }
     recaptchaVerifier = null;
   }
 }

@@ -61,13 +61,15 @@ export const getCustomers =
     );
 
 export const getCustomerById = asyncHandler(async (req, res) => {
-  const result = await customerService.getCustomerById(req.params.id, req.user.id);
+  const customerId = String(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  const result = await customerService.getCustomerById(customerId, req.user.id);
   return res.status(200).json(new ApiResponse(200, "Customer fetched successfully", result));
 });
 
 export const updateCustomer = asyncHandler(async (req, res) => {
+  const customerId = String(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const result = await customerService.updateCustomer(
-    req.params.id,
+    customerId,
     req.body,
     req.user.id
   );
@@ -77,8 +79,9 @@ export const updateCustomer = asyncHandler(async (req, res) => {
 });
 
 export const toggleCustomerStatus = asyncHandler(async (req, res) => {
+  const customerId = String(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
   const result = await customerService.toggleCustomerStatus(
-    req.params.id,
+    customerId,
     req.user.id
   );
   return res.status(200).json(

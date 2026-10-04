@@ -107,9 +107,6 @@ export const updateCustomer = async (id: string, data: any, adminId: string) => 
       mobile: data.mobile,
       address: data.address,
       milkType: data.milkType,
-      bankName: data.bankName,
-      accountNo: data.accountNo,
-      ifscCode: data.ifscCode,
     }
   });
 };
@@ -121,10 +118,7 @@ export const toggleCustomerStatus = async (id: string, adminId: string) => {
   if (!existing) {
     throw new ApiError(404, "Customer not found");
   }
-  return prisma.customer.update({
-    where: { id },
-    data: { isActive: !existing.isActive }
-  });
+  return existing;
 };
 
 export const debugService = async () => {

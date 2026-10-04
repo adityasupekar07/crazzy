@@ -133,6 +133,53 @@ export const createSettlement = async (
   allRecords.unshift(record);
   saveStorage(allRecords);
 
+  // Process advance deduction if provided
+  if (record.advanceDeductionAmount > 0) {
+    const activeAdvances = await prisma.advance.findMany({
+      where: {
+        customerId,
+        adminId,
+        status: { in: ['ACTIVE', 'PARTIALLY_RECOVERED'] }
+      },
+      orderBy: { createdAt: 'asc' }
+    });
+
+    let remainingDeduction = record.advanceDeductionAmount;
+    
+    for (const adv of activeAdvances) {
+      if (remainingDeduction <= 0) break;
+      
+      const deductAmt = Math.min(remainingDeduction, Number(adv.pendingAmount));
+      
+      const newPending = Number(adv.pendingAmount) - deductAmt;
+      const newRecovered = Number(adv.recoveredAmount) + deductAmt;
+      const newStatus = newPending === 0 ? 'CLOSED' : 'PARTIALLY_RECOVERED';
+
+      await prisma.$transaction(async (tx) => {
+        await tx.advanceTransaction.create({
+          data: {
+            advanceId: adv.id,
+            type: 'MANUAL_REPAYMENT',
+            amount: deductAmt,
+            notes: `Auto-deducted during bill settlement (${startDate} to ${endDate})`,
+            createdBy: adminId
+          }
+        });
+
+        await tx.advance.update({
+          where: { id: adv.id },
+          data: {
+            pendingAmount: newPending,
+            recoveredAmount: newRecovered,
+            status: newStatus
+          }
+        });
+      });
+
+      remainingDeduction -= deductAmt;
+    }
+  }
+
   logger.info(`Settlement created: ${record.id} for farmer ${customer.name} (₹${netPayable})`);
   return record;
 };

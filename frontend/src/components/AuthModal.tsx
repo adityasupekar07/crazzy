@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUIStore, useAuthStore, useTranslation } from '../store';
 import LanguageSelector from './LanguageSelector';
 import { X, Lock, Phone, User, Building, MapPin, Settings2, ShieldCheck, RotateCcw, ChevronLeft } from 'lucide-react';
 import OtpInput from './OtpInput';
+import { clearRecaptchaVerifier } from '../utils/firebase';
 
 export default function AuthModal() {
   const authModalOpen = useUIStore((state) => state.authModalOpen);
@@ -22,6 +23,12 @@ export default function AuthModal() {
   const error = useAuthStore((state) => state.error);
   const clearError = useAuthStore((state) => state.clearError);
   const resetToPhoneStep = useAuthStore((state) => state.resetToPhoneStep);
+
+  useEffect(() => {
+    return () => {
+      clearRecaptchaVerifier();
+    };
+  }, []);
 
   // ── Login ──────────────────────────────────────────────────────────────
   const [loginMobile, setLoginMobile] = useState('');
@@ -51,6 +58,7 @@ export default function AuthModal() {
   const handleClose = () => {
     setAuthModal(false);
     clearError();
+    clearRecaptchaVerifier();
   };
 
   // ── Handlers ──────────────────────────────────────────────────────────

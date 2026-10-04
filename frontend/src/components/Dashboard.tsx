@@ -13,7 +13,12 @@ import {
   useTranslation,
 } from '../store';
 import type { Advance } from '../store';
+import type { MilkEntry } from '../store/collection/useMilkCollectionStore';
 import LanguageSelector from './LanguageSelector';
+import TableSkeleton from './TableSkeleton';
+import ReceiptModal, { type ReceiptType } from './ReceiptModal';
+import BulkImportModal from './BulkImportModal';
+import { exportMilkCollectionsCsv, exportFarmersCsv, exportSettlementsCsv } from '../utils/csvExport';
 import { RateChartModule } from '../modules/rateChart/RateChartModule';
 import { rateChartService, type CalculateLiveRateResponse } from '../modules/rateChart/services/rateChart.service';
 import {
@@ -41,6 +46,9 @@ import {
   Settings,
   Building2,
   Save,
+  Printer,
+  Upload,
+  Download,
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -59,6 +67,7 @@ export default function Dashboard() {
   const addFarmer = useFarmerStore((state) => state.createFarmer);
   const updateFarmer = useFarmerStore((state) => state.updateFarmer);
   const toggleFarmerStatus = useFarmerStore((state) => state.toggleFarmerStatus);
+  const farmerStatus = useFarmerStore((state) => state.status);
   const farmerError = useFarmerStore((state) => state.error);
 
   const rateCharts = useRateChartStore((state) => state.rateCharts);
@@ -72,6 +81,7 @@ export default function Dashboard() {
   const addCollectionEntry = useMilkStore((state) => state.createCollectionEntry);
   const deleteCollectionEntry = useMilkStore((state) => state.deleteCollectionEntry);
   const updateCollectionEntry = useMilkStore((state) => state.updateCollectionEntry);
+  const milkStatus = useMilkStore((state) => state.status);
   const milkError = useMilkStore((state) => state.error);
 
   const dealers = useFeedStore((state) => state.dealers);
@@ -81,14 +91,20 @@ export default function Dashboard() {
   const fetchPurchases = useFeedStore((state) => state.fetchPurchases);
   const fetchSales = useFeedStore((state) => state.fetchSales);
   const addDealer = useFeedStore((state) => state.createDealer);
+  const updateDealer = useFeedStore((state) => state.updateDealer);
+  const toggleDealerStatus = useFeedStore((state) => state.toggleDealerStatus);
   const recordPurchase = useFeedStore((state) => state.createPurchase);
   const recordSale = useFeedStore((state) => state.createSale);
+  const feedStatus = useFeedStore((state) => state.status);
   const feedError = useFeedStore((state) => state.error);
 
   const advances = useAdvanceStore((state) => state.advances);
   const fetchAdvances = useAdvanceStore((state) => state.fetchAdvances);
   const createAdvance = useAdvanceStore((state) => state.createAdvance);
   const addRepayment = useAdvanceStore((state) => state.createRepayment);
+  const getAdvanceById = useAdvanceStore((state) => state.getAdvanceById);
+  const fetchCustomerAdvances = useAdvanceStore((state) => state.fetchCustomerAdvances);
+  const customerSummary = useAdvanceStore((state) => state.customerSummary);
   const advStatus = useAdvanceStore((state) => state.status);
   const advLoading = advStatus === 'loading';
   const advError = useAdvanceStore((state) => state.error);
@@ -102,7 +118,8 @@ export default function Dashboard() {
   const settlements = useBillingStore((state) => state.settlements);
   const fetchSettlements = useBillingStore((state) => state.fetchSettlements);
   const createSettlement = useBillingStore((state) => state.createSettlement);
-  const isSettlingBill = useBillingStore((state) => state.status === 'loading');
+  const billingStatus = useBillingStore((state) => state.status);
+  const isSettlingBill = billingStatus === 'loading';
   const billingError = useBillingStore((state) => state.error);
 
   const fetchError = adminError || farmerError || rateError || milkError || feedError || advError || profileError || billingError;
@@ -110,20 +127,16 @@ export default function Dashboard() {
   // Responsive sidebar drawer state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  // Load all data from backend when component mounts or token changes
+  // Internal routing in Dashboard
+  const [dbTab, setDbTab] = useState<'overview' | 'milk' | 'farmers' | 'rates' | 'feed' | 'billing' | 'advances' | 'settings'>('overview');
+
+  // Initial core bootstrap
   useEffect(() => {
     if (token) {
       fetchDashboard();
       fetchFarmers();
-      fetchRateCharts();
       fetchProfile();
-      fetchSettlements();
-
       fetchCollections();
-      fetchDealers();
-      fetchPurchases();
-      fetchSales();
-      fetchAdvances();
     }
   }, [token]);
 
@@ -134,25 +147,110 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [token]);
 
-  // Handle Milk Tab History Fetching
+  // Targeted Data Refetching on Tab Switch
   useEffect(() => {
-    if (dbTab === 'milk') {
-      const today = new Date().toISOString().split('T')[0];
-      if (milkStartDate === today && milkEndDate === today) {
+    if (!token) return;
+    switch (dbTab) {
+      case 'overview':
+        fetchDashboard();
+        fetchFarmers();
         fetchCollections();
-      } else {
-        fetchHistory(milkStartDate, milkEndDate);
-      }
+        break;
+      case 'milk':
+        fetchFarmers();
+        fetchRateCharts();
+        fetchCollections();
+        break;
+      case 'farmers':
+        fetchFarmers();
+        break;
+      case 'rates':
+        fetchRateCharts();
+        break;
+      case 'feed':
+        fetchDealers();
+        fetchPurchases();
+        fetchSales();
+        fetchFarmers();
+        break;
+      case 'billing':
+        fetchSettlements();
+        fetchFarmers();
+        break;
+      case 'advances':
+        fetchAdvances();
+        fetchFarmers();
+        break;
+      case 'settings':
+        fetchProfile();
+        break;
     }
-  }, [milkStartDate, milkEndDate, dbTab]);
-
-  // Internal routing in Dashboard
-  const [dbTab, setDbTab] = useState<'overview' | 'milk' | 'farmers' | 'rates' | 'feed' | 'billing' | 'advances' | 'settings'>('overview');
+  }, [dbTab, token]);
 
   // Modal control states
   const [farmerModalOpen, setFarmerModalOpen] = useState(false);
   const [dealerModalOpen, setDealerModalOpen] = useState(false);
   const [purchaseModalOpen, setPurchaseModalOpen] = useState(false);
+
+  // Receipt Modal State
+  const [receiptModalOpen, setReceiptModalOpen] = useState(false);
+  const [receiptType, setReceiptType] = useState<ReceiptType>('milk');
+  const [receiptData, setReceiptData] = useState<any>(null);
+
+  const openMilkReceipt = (entry: MilkEntry) => {
+    const farmer = farmers.find((f) => f.id === entry.customerId || f.code === entry.customerCode);
+    setReceiptType('milk');
+    setReceiptData({
+      customerCode: entry.customerCode,
+      customerName: entry.customerName,
+      mobile: farmer?.mobile,
+      date: entry.date,
+      shift: entry.shift,
+      milkType: entry.milkType,
+      quantity: entry.quantity,
+      fat: entry.fat,
+      snf: entry.snf,
+      rate: entry.rate,
+      totalAmount: entry.totalAmount,
+    });
+    setReceiptModalOpen(true);
+  };
+
+  const openBillReceipt = (bill: any) => {
+    const farmer = farmers.find((f) => f.id === bill.customerId || f.code === bill.customerCode);
+    setReceiptType('bill');
+    setReceiptData({
+      customerCode: bill.customerCode,
+      customerName: bill.customerName,
+      mobile: farmer?.mobile,
+      date: bill.createdAt ? new Date(bill.createdAt).toLocaleDateString() : new Date().toLocaleDateString(),
+      period: bill.period,
+      litres: bill.litres,
+      grossAmount: bill.grossAmount,
+      advanceDeducted: bill.advanceDeducted,
+      netPayable: bill.netPayable,
+    });
+    setReceiptModalOpen(true);
+  };
+
+  const openFeedReceipt = (sale: any) => {
+    const farmer = farmers.find((f) => f.id === sale.customerId || f.code === sale.customer?.code);
+    setReceiptType('feed');
+    setReceiptData({
+      customerCode: sale.customer?.code,
+      customerName: sale.customer?.name || 'Customer',
+      mobile: farmer?.mobile || sale.customer?.mobile,
+      date: sale.saleDate ? sale.saleDate.split('T')[0] : new Date().toLocaleDateString(),
+      feedName: sale.foodPurchase?.foodName || 'Cattle Feed',
+      quantity: sale.quantity,
+      totalAmount: sale.totalAmount,
+      isCash: sale.isCashPayment,
+      pendingBalance: sale.pendingAmount,
+    });
+    setReceiptModalOpen(true);
+  };
+  // Bulk Import Modal State
+  const [bulkImportOpen, setBulkImportOpen] = useState(false);
   const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
   const [repaymentModalOpen, setRepaymentModalOpen] = useState(false);
   const [historyModalOpen, setHistoryModalOpen] = useState(false);
@@ -178,6 +276,7 @@ export default function Dashboard() {
   const [dPhone, setDPhone] = useState('');
   const [dAddress, setDAddress] = useState('');
   const [dCode, setDCode] = useState('');
+  const [editDealerId, setEditDealerId] = useState<string | null>(null);
 
   // 3. RECORD BULK PURCHASE STATE
   const [pDealerId, setPDealerId] = useState('');
@@ -199,7 +298,6 @@ export default function Dashboard() {
   const [milkStartDate, setMilkStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [milkEndDate, setMilkEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [editMilkId, setEditMilkId] = useState<string | null>(null);
-  const [milkModalOpen, setMilkModalOpen] = useState(false);
 
   // 5. FEED SALE FORM STATE
   const [saleFarmerId, setSaleFarmerId] = useState('');
@@ -210,6 +308,7 @@ export default function Dashboard() {
 
   // 6. BILLING (persisted via billing store)
   const [billingFarmerId, setBillingFarmerId] = useState('');
+  const [billingAdvanceDeduction, setBillingAdvanceDeduction] = useState('');
   const [billingStartDate, setBillingStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
@@ -256,6 +355,9 @@ export default function Dashboard() {
   useEffect(() => {
     if (token) {
       fetchHistory(billingStartDate, billingEndDate, billingFarmerId || undefined);
+      if (billingFarmerId) {
+        fetchCustomerAdvances(billingFarmerId);
+      }
     }
   }, [token, billingStartDate, billingEndDate, billingFarmerId]);
 
@@ -390,7 +492,8 @@ export default function Dashboard() {
   const avgSnf = billingCollections.length
     ? Number((billingCollections.reduce((sum, c) => sum + c.snf, 0) / billingCollections.length).toFixed(2))
     : 0;
-  const billingNetPayable = Number(billingTotalGross.toFixed(2));
+  const billingDeductionAmt = Number(billingAdvanceDeduction) || 0;
+  const billingNetPayable = Number((billingTotalGross - billingDeductionAmt).toFixed(2));
 
   const filteredFarmers = farmers.filter(f =>
     f.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -405,6 +508,9 @@ export default function Dashboard() {
   const milkTotalAmount = displayCollections.reduce((sum, c) => sum + c.totalAmount, 0);
   const milkAvgFat = displayCollections.length ? (displayCollections.reduce((sum, c) => sum + c.fat, 0) / displayCollections.length).toFixed(1) : '0.0';
   const milkAvgSnf = displayCollections.length ? (displayCollections.reduce((sum, c) => sum + c.snf, 0) / displayCollections.length).toFixed(1) : '0.0';
+
+  const availablePurchases = purchases.filter(p => p.remainingQuantity > 0);
+  const outOfStockPurchases = purchases.filter(p => p.remainingQuantity <= 0);
 
   const navItems = [
     { id: 'overview', label: t('dashboard', 'navOverview'), icon: LayoutDashboard },
@@ -533,10 +639,36 @@ export default function Dashboard() {
   const handleAddDealerSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!dName || !dCode) { alert('Dealer Name and Code are required'); return; }
-    const success = await addDealer({ name: dName, phone: dPhone, address: dAddress, code: dCode });
+    let success;
+    if (editDealerId) {
+      success = await updateDealer(editDealerId, { name: dName, phone: dPhone, address: dAddress, code: dCode });
+    } else {
+      success = await addDealer({ name: dName, phone: dPhone, address: dAddress, code: dCode });
+    }
     if (success) {
       setDealerModalOpen(false);
+      setEditDealerId(null);
       setDName(''); setDPhone(''); setDAddress(''); setDCode('');
+    } else {
+      const err = useFeedStore.getState().error;
+      alert(err || `Failed to ${editDealerId ? 'update' : 'create'} dealer.`);
+    }
+  };
+
+  const handleEditDealerClick = (dealer: any) => {
+    setEditDealerId(dealer.id);
+    setDCode(dealer.code);
+    setDName(dealer.name);
+    setDPhone(dealer.phone);
+    setDAddress(dealer.address || '');
+    setDealerModalOpen(true);
+  };
+
+  const handleToggleDealer = async (id: string) => {
+    const success = await toggleDealerStatus(id);
+    if (!success) {
+      const err = useFeedStore.getState().error;
+      alert(err || 'Failed to toggle dealer status.');
     }
   };
 
@@ -555,6 +687,9 @@ export default function Dashboard() {
     if (success) {
       setPurchaseModalOpen(false);
       setPDealerId(''); setPFoodName(''); setPQty(''); setPBuyRate(''); setPSellRate(''); setPPaid('');
+    } else {
+      const err = useFeedStore.getState().error;
+      alert(err || 'Failed to record purchase.');
     }
   };
 
@@ -630,8 +765,9 @@ export default function Dashboard() {
         if (editMilkId) setEditMilkId(null);
         fetchDashboard();
       } else {
+        const storeErr = useMilkStore.getState().error;
         setMilkSuccessMsg('');
-        setMilkErrorMsg(`Error ${editMilkId ? 'updating' : 'saving'} entry.`);
+        setMilkErrorMsg(storeErr || `Error ${editMilkId ? 'updating' : 'saving'} entry.`);
       }
     } finally {
       setIsSubmittingMilk(false);
@@ -682,6 +818,7 @@ export default function Dashboard() {
       endDate: billingEndDate,
       totalAmount: billingTotalGross,
       netPayable: billingNetPayable,
+      advanceDeductionAmount: Number(billingAdvanceDeduction) || 0,
       litres: billingTotalQty,
       avgFat,
       avgSnf,
@@ -692,6 +829,7 @@ export default function Dashboard() {
     if (success) {
       alert(`Bill settled successfully for ₹${billingNetPayable}!`);
       setBillingFarmerId('');
+      setBillingAdvanceDeduction('');
       fetchSettlements();
     } else {
       alert(billingError || 'Failed to settle bill');
@@ -1005,7 +1143,26 @@ export default function Dashboard() {
                   {t('dashboard', 'todaysMilkCollections')} ({todayCollections.length})
                 </h3>
 
-                {todayCollections.length === 0 ? (
+                {milkStatus === 'loading' && todayCollections.length === 0 ? (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-left text-xs border-collapse">
+                      <thead>
+                        <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
+                          <th className="py-2.5">{t('dashboard', 'code')}</th>
+                          <th className="py-2.5">{t('dashboard', 'name')}</th>
+                          <th className="py-2.5">{t('dashboard', 'shift')}</th>
+                          <th className="py-2.5">{t('dashboard', 'qtyL')}</th>
+                          <th className="py-2.5">{t('dashboard', 'fatSnf')}</th>
+                          <th className="py-2.5 text-right">{t('dashboard', 'rate')}</th>
+                          <th className="py-2.5 text-right">{t('dashboard', 'total')}</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200 text-gray-700">
+                        <TableSkeleton rows={4} cols={7} />
+                      </tbody>
+                    </table>
+                  </div>
+                ) : todayCollections.length === 0 ? (
                   <div className="text-center py-12 text-xs text-gray-400 bg-[#fafbfc] rounded-lg border border-dashed border-gray-300">
                     {t('dashboard', 'noCollectionsToday')}
                   </div>
@@ -1276,29 +1433,44 @@ export default function Dashboard() {
 
             {/* Today's log */}
             <div className="lg:col-span-8 light-panel rounded-xl p-6">
-              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-2 border-b">
+              <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 mb-4 pb-2 border-b">
                 <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider">
                   {t('dashboard', 'todaysMilkLog')}
                 </h3>
-                <div className="flex items-center gap-3 mt-3 sm:mt-0">
-                  <div className="flex flex-col">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <div className="flex items-center gap-1.5">
                     <label className="text-[10px] text-gray-500 font-bold uppercase">From</label>
                     <input 
                       type="date" 
                       value={milkStartDate} 
                       onChange={(e) => setMilkStartDate(e.target.value)}
-                      className="light-input text-xs py-1 px-2 rounded w-32"
+                      className="light-input text-xs py-1 px-2 rounded w-28"
                     />
                   </div>
-                  <div className="flex flex-col">
+                  <div className="flex items-center gap-1.5">
                     <label className="text-[10px] text-gray-500 font-bold uppercase">To</label>
                     <input 
                       type="date" 
                       value={milkEndDate} 
                       onChange={(e) => setMilkEndDate(e.target.value)}
-                      className="light-input text-xs py-1 px-2 rounded w-32"
+                      className="light-input text-xs py-1 px-2 rounded w-28"
                     />
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setBulkImportOpen(true)}
+                    className="px-2.5 py-1.5 bg-[#deebff] hover:bg-[#b3d4ff] text-[#0052cc] text-xs font-bold rounded-lg transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Upload className="w-3.5 h-3.5" /> Bulk CSV
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => exportMilkCollectionsCsv(displayCollections, `milk_collections_${milkStartDate}_to_${milkEndDate}.csv`)}
+                    disabled={displayCollections.length === 0}
+                    className="px-2.5 py-1.5 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-700 text-xs font-bold rounded-lg border border-gray-300 transition flex items-center gap-1 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Export
+                  </button>
                 </div>
               </div>
               
@@ -1332,9 +1504,11 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
-                    {displayCollections.length === 0 ? (
+                    {milkStatus === 'loading' && displayCollections.length === 0 ? (
+                      <TableSkeleton rows={5} cols={8} />
+                    ) : displayCollections.length === 0 ? (
                       <tr>
-                        <td colSpan={9} className="py-8 text-center text-gray-400">{t('dashboard', 'noEntriesToday')}</td>
+                        <td colSpan={8} className="py-8 text-center text-gray-400">{t('dashboard', 'noEntriesToday')}</td>
                       </tr>
                     ) : displayCollections.map((c) => (
                       <tr key={c.id} className="hover:bg-gray-50">
@@ -1350,11 +1524,14 @@ export default function Dashboard() {
                         <td className="py-2.5 text-right font-mono font-medium">₹{c.rate.toFixed(2)}</td>
                         <td className="py-2.5 text-right font-mono font-bold text-[#091e42]">₹{c.totalAmount.toFixed(2)}</td>
                         <td className="py-2.5 text-right space-x-1">
+                          <button onClick={() => openMilkReceipt(c)} title="Print Milk Slip" className="p-1 text-gray-500 hover:text-[#0052cc] hover:bg-blue-50 rounded transition cursor-pointer">
+                            <Printer className="w-3.5 h-3.5 inline" />
+                          </button>
                           <button onClick={() => handleEditMilkClick(c)} className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition cursor-pointer font-bold text-[10px]">
                             EDIT
                           </button>
                           <button onClick={() => handleBillDelete(c.id)} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition cursor-pointer">
-                            <Trash2 className="w-3.5 h-3.5" />
+                            <Trash2 className="w-3.5 h-3.5 inline" />
                           </button>
                         </td>
                       </tr>
@@ -1390,12 +1567,22 @@ export default function Dashboard() {
                 />
                 <Search className="w-4 h-4 text-gray-400 absolute left-3 top-2.5" />
               </div>
-              <button
-                onClick={() => { setFarmerErrorMsg(''); setFarmerSuccessMsg(''); setFarmerModalOpen(true); }}
-                className="w-full sm:w-auto bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold text-xs px-4 py-2.5 rounded-lg transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
-              >
-                <UserPlus className="w-4 h-4" /> {t('customer', 'registerButton')}
-              </button>
+              <div className="flex items-center gap-2.5 w-full sm:w-auto">
+                <button
+                  type="button"
+                  onClick={() => exportFarmersCsv(filteredFarmers)}
+                  disabled={filteredFarmers.length === 0}
+                  className="w-full sm:w-auto bg-gray-100 hover:bg-gray-200 disabled:opacity-50 text-gray-700 font-bold text-xs px-3.5 py-2.5 rounded-lg border border-gray-300 transition flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Download className="w-4 h-4" /> Export CSV
+                </button>
+                <button
+                  onClick={() => { setFarmerErrorMsg(''); setFarmerSuccessMsg(''); setFarmerModalOpen(true); }}
+                  className="w-full sm:w-auto bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold text-xs px-4 py-2.5 rounded-lg transition shadow-md flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <UserPlus className="w-4 h-4" /> {t('customer', 'registerButton')}
+                </button>
+              </div>
             </div>
 
             <div className="light-panel rounded-xl p-6">
@@ -1413,9 +1600,11 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
-                    {filteredFarmers.length === 0 ? (
+                    {farmerStatus === 'loading' && filteredFarmers.length === 0 ? (
+                      <TableSkeleton rows={6} cols={7} />
+                    ) : filteredFarmers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="py-8 text-center text-gray-400">
+                        <td colSpan={7} className="py-8 text-center text-gray-400">
                           {searchQuery ? t('customer', 'noSearchResults') : t('customer', 'emptyState')}
                         </td>
                       </tr>
@@ -1486,7 +1675,7 @@ export default function Dashboard() {
                   <label className="block text-xs font-semibold text-gray-600">{t('dashboard', 'selectFeedBatch')}</label>
                   <select value={salePurchaseId} onChange={(e) => setSalePurchaseId(e.target.value)} className="mt-1 w-full light-input rounded-lg text-xs py-2 px-2" required>
                     <option value="">{t('dashboard', 'chooseBatch')}</option>
-                    {purchases.map(p => (
+                    {availablePurchases.map(p => (
                       <option key={p.id} value={p.id}>
                         {p.foodName} ({t('landing', 'stockLeft')}: {p.remainingQuantity} / ₹{p.sellRate})
                       </option>
@@ -1529,11 +1718,14 @@ export default function Dashboard() {
                       <th className="py-2.5">{t('dashboard', 'qty')}</th>
                       <th className="py-2.5 text-right">{t('dashboard', 'total')}</th>
                       <th className="py-2.5 text-center">{t('dashboard', 'mode')}</th>
+                      <th className="py-2.5 text-right">Slip</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
-                    {sales.length === 0 ? (
-                      <tr><td colSpan={6} className="py-8 text-center text-gray-400">{t('dashboard', 'noSalesRecorded')}</td></tr>
+                    {feedStatus === 'loading' && sales.length === 0 ? (
+                      <TableSkeleton rows={4} cols={7} />
+                    ) : sales.length === 0 ? (
+                      <tr><td colSpan={7} className="py-8 text-center text-gray-400">{t('dashboard', 'noSalesRecorded')}</td></tr>
                     ) : sales.map((s) => (
                       <tr key={s.id} className="hover:bg-gray-50">
                         <td className="py-2.5 font-medium text-gray-500">
@@ -1544,16 +1736,94 @@ export default function Dashboard() {
                         </td>
                         <td className="py-2.5 text-gray-700">{s.foodPurchase?.foodName ?? '—'}</td>
                         <td className="py-2.5 font-mono">{s.quantity}</td>
-                        <td className="py-2.5 text-right font-mono font-bold text-[#091e42]">₹{s.totalAmount?.toFixed(2) ?? '0.00'}</td>
+                        <td className="py-2.5 text-right font-mono text-[#091e42]">
+                          <div className="font-bold">₹{s.totalAmount?.toFixed(2) ?? '0.00'}</div>
+                          {!s.isCashPayment && s.pendingAmount > 0 && (
+                            <div className="text-[10px] text-amber-600 font-semibold">Bal: ₹{s.pendingAmount.toFixed(2)}</div>
+                          )}
+                        </td>
                         <td className="py-2.5 text-center">
-                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.isCashPayment ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${s.isCashPayment ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
                             {s.isCashPayment ? t('dashboard', 'paid') : t('dashboard', 'credit')}
                           </span>
+                        </td>
+                        <td className="py-2.5 text-right">
+                          <button onClick={() => openFeedReceipt(s)} title="Print Feed Slip" className="p-1 text-gray-500 hover:text-[#0052cc] hover:bg-blue-50 rounded transition cursor-pointer">
+                            <Printer className="w-3.5 h-3.5 inline" />
+                          </button>
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* Dealers & Inventory Views */}
+            <div className="lg:col-span-12 grid grid-cols-1 lg:grid-cols-2 gap-8">
+              {/* Dealers List */}
+              <div className="light-panel rounded-xl p-6">
+                <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">Dealer Management</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
+                        <th className="py-2.5">Code</th>
+                        <th className="py-2.5">Name</th>
+                        <th className="py-2.5">Phone</th>
+                        <th className="py-2.5 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 text-gray-700">
+                      {feedStatus === 'loading' && dealers.length === 0 ? (
+                        <TableSkeleton rows={3} cols={4} />
+                      ) : dealers.length === 0 ? (
+                        <tr><td colSpan={4} className="py-8 text-center text-gray-400">No dealers added</td></tr>
+                      ) : dealers.map((d) => (
+                        <tr key={d.id} className={`hover:bg-gray-50 ${!d.isActive ? 'opacity-50' : ''}`}>
+                          <td className="py-2.5 font-bold text-[#0052cc]">
+                            {d.code} {!d.isActive && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded ml-1">Inactive</span>}
+                          </td>
+                          <td className="py-2.5 font-semibold text-[#091e42]">{d.name}</td>
+                          <td className="py-2.5 text-gray-500">{d.phone}</td>
+                          <td className="py-2.5 text-right space-x-2">
+                            <button onClick={() => handleEditDealerClick(d)} className="text-blue-600 hover:text-blue-800 font-semibold text-[11px] cursor-pointer">Edit</button>
+                            <button onClick={() => handleToggleDealer(d.id)} className={`${d.isActive ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'} font-semibold text-[11px] cursor-pointer`}>
+                              {d.isActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Out of Stock inventory */}
+              <div className="light-panel rounded-xl p-6">
+                <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">Out-of-Stock Batches</h3>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-xs border-collapse">
+                    <thead>
+                      <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
+                        <th className="py-2.5">Feed</th>
+                        <th className="py-2.5">Dealer</th>
+                        <th className="py-2.5">Purchased Qty</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200 text-gray-700">
+                      {outOfStockPurchases.length === 0 ? (
+                        <tr><td colSpan={3} className="py-8 text-center text-gray-400">No out-of-stock batches</td></tr>
+                      ) : outOfStockPurchases.map((p) => (
+                        <tr key={p.id} className="hover:bg-gray-50 opacity-60">
+                          <td className="py-2.5 font-semibold text-[#091e42]">{p.foodName}</td>
+                          <td className="py-2.5 text-gray-500">{p.dealer?.name ?? '—'}</td>
+                          <td className="py-2.5 font-mono">{p.quantity}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </div>
             </div>
 
@@ -1628,7 +1898,18 @@ export default function Dashboard() {
                       <span>Gross Milk Value</span>
                       <span className="font-mono">₹{billingTotalGross.toFixed(2)}</span>
                     </div>
-                    <div className="bg-[#deebff] border border-blue-200 p-3 rounded-lg flex justify-between">
+                    {customerSummary && customerSummary.summary.totalPending > 0 && (
+                      <div className="py-2 border-y border-gray-200 mt-2">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-amber-600 font-semibold text-[10px]">Pending Advance: ₹{customerSummary.summary.totalPending.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-500">Advance Deduction</span>
+                          <input type="number" max={customerSummary.summary.totalPending} value={billingAdvanceDeduction} onChange={(e) => setBillingAdvanceDeduction(e.target.value)} placeholder="0.00" className="w-24 light-input rounded py-1 px-2 text-right text-[10px]" />
+                        </div>
+                      </div>
+                    )}
+                    <div className="bg-[#deebff] border border-blue-200 p-3 rounded-lg flex justify-between mt-2">
                       <span className="text-[10px] font-bold uppercase text-[#0747a6]">Net Payout</span>
                       <strong className="text-[#091e42] text-lg font-black">₹{billingNetPayable}</strong>
                     </div>
@@ -1644,37 +1925,56 @@ export default function Dashboard() {
               </div>
             )}
 
-            {settlements.length > 0 && (
-              <div className="light-panel rounded-xl p-6">
-                <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">
-                  Settled Bills History ({settlements.length})
+            <div className="light-panel rounded-xl p-6">
+              <div className="flex items-center justify-between mb-4 border-b pb-2">
+                <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider">
+                  Settled Bills History {settlements.length > 0 && `(${settlements.length})`}
                 </h3>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
-                        <th className="py-2.5">Date</th>
-                        <th className="py-2.5">Farmer</th>
-                        <th className="py-2.5">Period</th>
-                        <th className="py-2.5">Litres</th>
-                        <th className="py-2.5 text-right">Net Paid</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-200 text-gray-700">
-                      {settlements.map((b) => (
-                        <tr key={b.id} className="hover:bg-gray-50">
-                          <td className="py-2.5 text-gray-500">{b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '—'}</td>
-                          <td className="py-2.5 font-semibold text-[#091e42]">{b.customerName} ({b.customerCode})</td>
-                          <td className="py-2.5 text-gray-500 text-[10px]">{b.period}</td>
-                          <td className="py-2.5 font-mono">{b.litres.toFixed(1)} L</td>
-                          <td className="py-2.5 text-right font-mono font-extrabold text-green-600">₹{b.netPayable.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                {settlements.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => exportSettlementsCsv(settlements)}
+                    className="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-bold rounded-lg border border-gray-300 transition flex items-center gap-1.5 cursor-pointer"
+                  >
+                    <Download className="w-3.5 h-3.5" /> Export Settlements CSV
+                  </button>
+                )}
               </div>
-            )}
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-gray-500 font-semibold uppercase text-[10px]">
+                      <th className="py-2.5">Date</th>
+                      <th className="py-2.5">Farmer</th>
+                      <th className="py-2.5">Period</th>
+                      <th className="py-2.5">Litres</th>
+                      <th className="py-2.5 text-right">Net Paid</th>
+                      <th className="py-2.5 text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200 text-gray-700">
+                    {billingStatus === 'loading' && settlements.length === 0 ? (
+                      <TableSkeleton rows={4} cols={6} />
+                    ) : settlements.length === 0 ? (
+                      <tr><td colSpan={6} className="py-8 text-center text-gray-400">No settled bills recorded</td></tr>
+                    ) : settlements.map((b) => (
+                      <tr key={b.id} className="hover:bg-gray-50">
+                        <td className="py-2.5 text-gray-500">{b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '—'}</td>
+                        <td className="py-2.5 font-semibold text-[#091e42]">{b.customerName} ({b.customerCode})</td>
+                        <td className="py-2.5 text-gray-500 text-[10px]">{b.period}</td>
+                        <td className="py-2.5 font-mono">{b.litres.toFixed(1)} L</td>
+                        <td className="py-2.5 text-right font-mono font-extrabold text-green-600">₹{b.netPayable.toFixed(2)}</td>
+                        <td className="py-2.5 text-right">
+                          <button onClick={() => openBillReceipt(b)} className="px-2 py-1 text-[10px] bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold rounded transition cursor-pointer inline-flex items-center gap-1">
+                            <Printer className="w-3 h-3" /> Slip
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -1771,10 +2071,12 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
-                    {filteredAdvances.length === 0 ? (
+                    {advLoading && filteredAdvances.length === 0 ? (
+                      <TableSkeleton rows={5} cols={8} />
+                    ) : filteredAdvances.length === 0 ? (
                       <tr>
                         <td colSpan={8} className="py-8 text-center text-gray-400">
-                          {advLoading ? 'Loading advances...' : t('dashboard', 'noAdvancesFound')}
+                          {t('dashboard', 'noAdvancesFound')}
                         </td>
                       </tr>
                     ) : filteredAdvances.map((adv) => (
@@ -1812,9 +2114,13 @@ export default function Dashboard() {
                             </button>
                           )}
                           <button
-                            onClick={() => {
+                            onClick={async () => {
                               setSelectedAdvance(adv);
                               setHistoryModalOpen(true);
+                              const freshAdv = await getAdvanceById(adv.id);
+                              if (freshAdv) {
+                                setSelectedAdvance(freshAdv);
+                              }
                             }}
                             className="px-2 py-1 text-[10px] bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold rounded transition cursor-pointer flex items-center gap-1"
                           >
@@ -2178,17 +2484,17 @@ export default function Dashboard() {
       ══════════════════════════════════════════════════════════════ */}
       {dealerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => setDealerModalOpen(false)} />
+          <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => { setDealerModalOpen(false); setEditDealerId(null); }} />
           <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl max-h-[90vh] overflow-y-auto mx-4">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-[#f4f5f7]">
-              <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">{t('dashboard', 'addWholesaleDealer')}</h4>
-              <button onClick={() => setDealerModalOpen(false)} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
+              <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">{editDealerId ? 'Edit Wholesale Dealer' : t('dashboard', 'addWholesaleDealer')}</h4>
+              <button onClick={() => { setDealerModalOpen(false); setEditDealerId(null); }} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
             </div>
             <form onSubmit={handleAddDealerSubmit} className="p-5 space-y-4 text-xs">
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t('dashboard', 'dealerCode')}</label>
-                  <input type="text" value={dCode} onChange={(e) => setDCode(e.target.value)} placeholder={t('dashboard', 'dealerCodePlaceholder')} className="mt-1 w-full light-input rounded py-1.5 px-2.5" required />
+                  <input type="text" value={dCode} onChange={(e) => setDCode(e.target.value)} placeholder={t('dashboard', 'dealerCodePlaceholder')} className="mt-1 w-full light-input rounded py-1.5 px-2.5" disabled={!!editDealerId} required />
                 </div>
                 <div>
                   <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">{t('dashboard', 'dealerName')}</label>
@@ -2204,7 +2510,7 @@ export default function Dashboard() {
                 <input type="text" value={dAddress} onChange={(e) => setDAddress(e.target.value)} placeholder={t('dashboard', 'addressPlaceholder')} className="mt-1 w-full light-input rounded py-1.5 px-2.5" />
               </div>
               <button type="submit" className="w-full bg-[#0052cc] hover:bg-[#0747a6] text-white font-bold py-2 rounded transition cursor-pointer">
-                {t('dashboard', 'createDealer')}
+                {editDealerId ? 'Update Dealer' : t('dashboard', 'createDealer')}
               </button>
             </form>
           </div>
@@ -2455,7 +2761,32 @@ export default function Dashboard() {
         </div>
       )}
 
-        </div>
-      </div>
+      {/* ══════════════════════════════════════════════════════════════
+          BULK MILK IMPORT MODAL
+      ══════════════════════════════════════════════════════════════ */}
+      <BulkImportModal
+        isOpen={bulkImportOpen}
+        onClose={() => setBulkImportOpen(false)}
+        farmers={farmers}
+        onImportEntry={addCollectionEntry}
+        onComplete={() => {
+          fetchCollections();
+          fetchDashboard();
+        }}
+      />
+
+      {/* ══════════════════════════════════════════════════════════════
+          PRINTABLE RECEIPT / THERMAL SLIP MODAL
+      ══════════════════════════════════════════════════════════════ */}
+      <ReceiptModal
+        isOpen={receiptModalOpen}
+        onClose={() => setReceiptModalOpen(false)}
+        type={receiptType}
+        dairyProfile={profile || user}
+        data={receiptData}
+      />
+
+    </div>
+  </div>
   );
 }

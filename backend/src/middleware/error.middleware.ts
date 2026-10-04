@@ -24,9 +24,23 @@ const globalErrorHandler = (
      * =====================================================
      */
     if (err.code === "P2002") {
+        const target = Array.isArray(err.meta?.target) 
+            ? err.meta.target.join(", ") 
+            : String(err.meta?.target || "");
+
+        let friendlyMsg = "Duplicate entry: a record with these unique details already exists.";
+
+        if (target.includes("code") && target.includes("adminId")) {
+            friendlyMsg = "Customer code already exists. Please enter a different code.";
+        } else if (target.includes("mobile")) {
+            friendlyMsg = "A record with this mobile number already exists.";
+        } else if (target.includes("shift") || target.includes("date")) {
+            friendlyMsg = "A milk delivery entry for this shift already exists on this date.";
+        }
+
         error = new ApiError(
             409,
-            "Duplicate entry: a record with these unique details already exists.",
+            friendlyMsg,
             {
                 code: "DUPLICATE_ENTRY",
                 errors: err.meta?.target || [],

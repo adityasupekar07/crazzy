@@ -138,6 +138,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       const credential = await _confirmationResult.confirm(otp);
       const firebaseToken = await credential.user.getIdToken();
       await auth.signOut();
+      clearRecaptchaVerifier();
 
       const res = await request('/auth/verify-phone', 'POST', {
         firebaseToken,
@@ -152,6 +153,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       });
       return true;
     } catch (err: any) {
+      clearRecaptchaVerifier();
       const msg = err?.code === 'auth/invalid-verification-code'
         ? 'Incorrect OTP. Please try again.'
         : err?.code === 'auth/code-expired'
@@ -230,6 +232,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   },
 
   logout: () => {
+    clearRecaptchaVerifier();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     resetAllBusinessStores();
@@ -238,14 +241,17 @@ export const useAuthStore = create<AuthState>((set, get) => ({
 
   clearError: () => set({ error: null }),
 
-  resetToPhoneStep: () =>
+  resetToPhoneStep: () => {
+    clearRecaptchaVerifier();
     set({
       registrationProgress: 'phone',
       _confirmationResult: null,
       error: null,
-    }),
+    });
+  },
 
   reset: () => {
+    clearRecaptchaVerifier();
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     resetAllBusinessStores();

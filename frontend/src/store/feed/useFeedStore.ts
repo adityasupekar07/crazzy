@@ -51,6 +51,13 @@ export interface CreateDealerInput {
   code: string;
 }
 
+export interface UpdateDealerInput {
+  name?: string;
+  phone?: string;
+  address?: string;
+  code?: string;
+}
+
 export interface CreatePurchaseInput {
   dealerId: string;
   foodName: string;
@@ -86,6 +93,8 @@ export interface FeedState {
   fetchSales: () => Promise<void>;
   createDealer: (dealer: CreateDealerInput) => Promise<boolean>;
   addDealer: (dealer: CreateDealerInput) => Promise<boolean>; // Alias
+  updateDealer: (id: string, dealer: Partial<UpdateDealerInput>) => Promise<boolean>;
+  toggleDealerStatus: (id: string) => Promise<boolean>;
   createPurchase: (purchase: CreatePurchaseInput) => Promise<boolean>;
   recordPurchase: (purchase: CreatePurchaseInput) => Promise<boolean>; // Alias
   createSale: (sale: CreateSaleInput) => Promise<boolean>;
@@ -160,6 +169,34 @@ export const useFeedStore = create<FeedState>((set, get) => ({
     }
   },
   addDealer: (dealer) => get().createDealer(dealer),
+
+  // ── UPDATE DEALER ──────────────────────────────────────────────────────────
+  updateDealer: async (id, dealer) => {
+    set({ status: 'loading', error: null });
+    try {
+      await request(`/food-dealers/${id}`, 'PATCH', dealer);
+      await get().fetchDealers();
+      set({ status: 'success' });
+      return true;
+    } catch (err: any) {
+      set({ error: err.message, status: 'error' });
+      return false;
+    }
+  },
+
+  // ── TOGGLE DEALER STATUS ───────────────────────────────────────────────────
+  toggleDealerStatus: async (id) => {
+    set({ status: 'loading', error: null });
+    try {
+      await request(`/food-dealers/${id}`, 'DELETE');
+      await get().fetchDealers();
+      set({ status: 'success' });
+      return true;
+    } catch (err: any) {
+      set({ error: err.message, status: 'error' });
+      return false;
+    }
+  },
 
   // ── CREATE PURCHASE ────────────────────────────────────────────────────────
   createPurchase: async (purchase) => {

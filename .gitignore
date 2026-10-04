@@ -1,0 +1,25 @@
+# Operating System
+.DS_Store
+Thumbs.db
+
+# Environment variables
+.env
+*.env.local
+
+# Dependencies
+node_modules/
+
+# Production build outputs
+dist/
+build/
+backend/dist/
+frontend/dist/
+
+# Logs
+*.log
+logs/
+backend/logs/
+
+# Firebase private keys
+firebase-service-account.json
+backend/firebase-service-account.json

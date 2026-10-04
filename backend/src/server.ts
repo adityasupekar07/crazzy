@@ -23,20 +23,23 @@ const PORT =
 const startServer = async () => {
     try {
         // TEST DATABASE CONNECTION
-
-        await prisma.$connect();
-
-        logger.info(
-            "✅ PostgreSQL connected"
-        );
+        try {
+            await prisma.$connect();
+            logger.info("✅ PostgreSQL connected");
+        } catch (dbError: any) {
+            logger.warn(
+                "⚠️ PostgreSQL database not reachable yet. Please configure valid DATABASE_URL in backend/.env or start PostgreSQL.",
+                { message: dbError?.message || dbError }
+            );
+        }
 
         // await connectRedis();
 
         const server = app.listen(
-            PORT,"0.0.0.0",
+            PORT, "0.0.0.0",
             () => {
                 logger.info(
-                    `🚀 Server running in ${process.env.NODE_ENV} mode on port ${PORT}`
+                    `🚀 Server running in ${process.env.NODE_ENV || "development"} mode on port ${PORT}`
                 );
             }
         );
