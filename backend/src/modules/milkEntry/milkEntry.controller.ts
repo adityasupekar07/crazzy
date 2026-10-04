@@ -247,3 +247,30 @@ export const getMilkEntriesByDate =
       );
     }
   );
+
+// ========================================
+// GET MILK HISTORY
+// ========================================
+
+export const getMilkHistory = asyncHandler(
+  async (req, res) => {
+    const startDate = req.query.startDate ? String(req.query.startDate) : undefined;
+    const endDate = req.query.endDate ? String(req.query.endDate) : undefined;
+    const customerId = req.query.customerId ? String(req.query.customerId) : undefined;
+
+    const result = await milkEntryService.getMilkHistory(
+      req.user.id,
+      startDate,
+      endDate,
+      customerId
+    );
+
+    return res.status(200).json(
+      new ApiResponse(
+        200,
+        "Milk history fetched successfully",
+        result
+      )
+    );
+  }
+);

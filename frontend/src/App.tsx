@@ -15,7 +15,16 @@ function App() {
   // Restore auth state from localStorage on first mount
   useEffect(() => {
     initialize();
-  }, [initialize]);
+
+    const handleAuthError = () => {
+      useAuthStore.getState().logout();
+      setView('landing');
+      setAuthModal(true, 'login');
+    };
+
+    window.addEventListener('auth-error', handleAuthError);
+    return () => window.removeEventListener('auth-error', handleAuthError);
+  }, [initialize, setView, setAuthModal]);
 
   // Route guard: redirect unauthenticated users away from dashboard
   useEffect(() => {

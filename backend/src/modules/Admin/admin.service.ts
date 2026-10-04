@@ -88,28 +88,47 @@ export const updateProfile =
     ) => {
 
         /**
-         * CHECK MOBILE EXISTS
+         * CHECK MOBILE EXISTS IF CHANGING
          */
 
-        const existingAdmin =
-            await prisma.admin.findFirst({
-                where: {
-                    mobile:
-                        data.mobile,
+        if (data.mobile) {
+            const existingAdmin =
+                await prisma.admin.findFirst({
+                    where: {
+                        mobile:
+                            data.mobile,
 
-                    NOT: {
-                        id:
-                            adminId,
+                        NOT: {
+                            id:
+                                adminId,
+                        },
                     },
-                },
-            });
+                });
 
-        if (existingAdmin) {
-            throw new ApiError(
-                400,
-                "Mobile already exists"
-            );
+            if (existingAdmin) {
+                throw new ApiError(
+                    400,
+                    "Mobile already exists"
+                );
+            }
         }
+
+        /**
+         * BUILD UPDATE PAYLOAD
+         */
+
+        const updateData: any = {};
+        if (data.ownerName !== undefined) updateData.ownerName = data.ownerName;
+        if (data.mobile !== undefined) updateData.mobile = data.mobile;
+        if (data.dairyName !== undefined) updateData.dairyName = data.dairyName;
+        if (data.village !== undefined) updateData.village = data.village;
+        if (data.taluka !== undefined) updateData.taluka = data.taluka;
+        if (data.district !== undefined) updateData.district = data.district;
+        if (data.state !== undefined) updateData.state = data.state;
+        if (data.collectionType !== undefined) updateData.collectionType = data.collectionType;
+        if (data.milkType !== undefined) updateData.milkType = data.milkType;
+        if (data.collectionShift !== undefined) updateData.collectionShift = data.collectionShift;
+        if (data.paymentPeriod !== undefined) updateData.paymentPeriod = data.paymentPeriod;
 
         /**
          * UPDATE PROFILE
@@ -120,28 +139,23 @@ export const updateProfile =
                 id: adminId,
             },
 
-            data: {
-                ownerName:
-                    data.ownerName,
-
-                mobile:
-                    data.mobile,
-            },
+            data: updateData,
 
             select: {
                 id: true,
-
-                ownerName:
-                    true,
-
-                mobile:
-                    true,
-
-                dairyName:
-                    true,
-
-                createdAt:
-                    true,
+                ownerName: true,
+                mobile: true,
+                dairyName: true,
+                village: true,
+                taluka: true,
+                district: true,
+                state: true,
+                collectionType: true,
+                milkType: true,
+                collectionShift: true,
+                paymentPeriod: true,
+                createdAt: true,
+                updatedAt: true,
             },
         });
     };

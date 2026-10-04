@@ -11,11 +11,66 @@ export const updateProfileSchema =
     z.object({
         ownerName:
             z.string()
-            .min(2),
+            .min(2)
+            .optional(),
 
         mobile:
             z.string()
-            .min(10),
+            .min(10)
+            .optional(),
+
+        dairyName:
+            z.string()
+            .optional(),
+
+        village:
+            z.string()
+            .optional(),
+
+        taluka:
+            z.string()
+            .optional(),
+
+        district:
+            z.string()
+            .optional(),
+
+        state:
+            z.string()
+            .optional(),
+
+        collectionType:
+            z.enum([
+                "FIXED_RATE",
+                "FAT_BASED",
+                "FAT_SNF_BASED",
+            ])
+            .optional(),
+
+        milkType:
+            z.enum([
+                "COW",
+                "BUFFALO",
+                "MIX",
+            ])
+            .optional(),
+
+        collectionShift:
+            z.enum([
+                "MORNING",
+                "EVENING",
+                "BOTH",
+            ])
+            .optional(),
+
+        paymentPeriod:
+            z.enum([
+                "DAILY",
+                "WEEKLY",
+                "BIWEEKLY",
+                "MONTHLY",
+            ])
+            .optional(),
     });
 
 /**

@@ -35,6 +35,7 @@ export interface CreateMilkEntryInput {
 export interface MilkCollectionState {
   // Data
   collections: MilkEntry[];
+  history: MilkEntry[];
 
   // Status
   status: StoreStatus;
@@ -42,14 +43,40 @@ export interface MilkCollectionState {
 
   // Actions
   fetchCollections: () => Promise<void>;
+  fetchHistory: (startDate?: string, endDate?: string, customerId?: string) => Promise<void>;
   createCollectionEntry: (entry: CreateMilkEntryInput) => Promise<boolean>;
   addCollectionEntry: (entry: CreateMilkEntryInput) => Promise<boolean>; // Alias
+  updateCollectionEntry: (id: string, entry: Partial<CreateMilkEntryInput>) => Promise<boolean>;
   deleteCollectionEntry: (id: string) => Promise<boolean>;
   reset: () => void;
 }
 
+function mapRawMilkEntry(item: any): MilkEntry {
+  let dateStr = new Date().toISOString().split('T')[0];
+  if (item.date) {
+    const d = new Date(item.date);
+    dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+  return {
+    id: item.id,
+    date: dateStr,
+    shift: item.shift,
+    quantity: item.quantity,
+    fat: item.fat ?? 0,
+    snf: item.snf ?? 0,
+    rate: item.rate ?? 0,
+    totalAmount: item.totalAmount ?? 0,
+    customerId: item.customerId,
+    customerName: item.customer?.name ?? 'Unknown',
+    customerCode: item.customer?.code ?? 0,
+    milkType: item.milkType,
+    createdAt: item.createdAt,
+  };
+}
+
 const initialMilkData = {
   collections: [],
+  history: [],
   status: 'idle' as StoreStatus,
   error: null,
 };
@@ -62,33 +89,29 @@ export const useMilkCollectionStore = create<MilkCollectionState>((set, get) => 
     set({ status: 'loading', error: null });
     try {
       const data: any[] = await request('/milk/today');
-
-      const mapped: MilkEntry[] = (data ?? []).map((item) => {
-        let dateStr = new Date().toISOString().split('T')[0];
-        if (item.date) {
-          const d = new Date(item.date);
-          dateStr = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-        }
-        return {
-          id: item.id,
-          date: dateStr,
-          shift: item.shift,
-          quantity: item.quantity,
-          fat: item.fat ?? 0,
-          snf: item.snf ?? 0,
-          rate: item.rate ?? 0,
-          totalAmount: item.totalAmount ?? 0,
-          customerId: item.customerId,
-          customerName: item.customer?.name ?? 'Unknown',
-          customerCode: item.customer?.code ?? 0,
-          milkType: item.milkType,
-          createdAt: item.createdAt,
-        };
-      });
-
+      const mapped: MilkEntry[] = (data ?? []).map(mapRawMilkEntry);
       set({ collections: mapped, status: 'success' });
     } catch (err: any) {
       console.error('Failed to fetch milk entries:', err.message);
+      set({ status: 'error', error: err.message });
+    }
+  },
+
+  // ── FETCH HISTORICAL ENTRIES ───────────────────────────────────────────────
+  fetchHistory: async (startDate?: string, endDate?: string, customerId?: string) => {
+    set({ status: 'loading', error: null });
+    try {
+      const params = new URLSearchParams();
+      if (startDate) params.set('startDate', startDate);
+      if (endDate) params.set('endDate', endDate);
+      if (customerId) params.set('customerId', customerId);
+
+      const qs = params.toString() ? `?${params.toString()}` : '';
+      const data: any[] = await request(`/milk/history${qs}`);
+      const mapped: MilkEntry[] = (data ?? []).map(mapRawMilkEntry);
+      set({ history: mapped, status: 'success' });
+    } catch (err: any) {
+      console.error('Failed to fetch milk history:', err.message);
       set({ status: 'error', error: err.message });
     }
   },
@@ -141,6 +164,36 @@ export const useMilkCollectionStore = create<MilkCollectionState>((set, get) => 
   },
 
   addCollectionEntry: (entry) => get().createCollectionEntry(entry),
+
+  // ── UPDATE ENTRY ───────────────────────────────────────────────────────────
+  updateCollectionEntry: async (id, entry) => {
+    set({ status: 'loading', error: null });
+    try {
+      const payload: any = {};
+      if (entry.customerCode) payload.customerCode = String(entry.customerCode);
+      if (entry.shift) payload.shift = entry.shift;
+      if (entry.milkType) payload.milkType = entry.milkType;
+      if (entry.quantity) payload.quantity = Number(entry.quantity);
+      if (entry.fat !== undefined) payload.fat = Number(entry.fat);
+      if (entry.snf !== undefined) payload.snf = Number(entry.snf);
+      if (entry.rate !== undefined) payload.rate = entry.rate;
+      if (entry.totalAmount !== undefined) payload.totalAmount = entry.totalAmount;
+      if (entry.rateChartId) payload.rateChartId = entry.rateChartId;
+
+      const res: any = await request(`/milk/${id}`, 'PATCH', payload);
+      const updatedEntry = mapRawMilkEntry(res);
+
+      set({ 
+        collections: get().collections.map(c => c.id === id ? updatedEntry : c),
+        history: get().history.map(c => c.id === id ? updatedEntry : c),
+        status: 'success' 
+      });
+      return true;
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to update milk entry', status: 'error' });
+      return false;
+    }
+  },
 
   // ── DELETE ENTRY ───────────────────────────────────────────────────────────
   deleteCollectionEntry: async (id) => {

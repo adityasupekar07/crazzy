@@ -73,6 +73,60 @@ export const getCustomers = async (adminId: string) => {
   });
 };
 
+export const getCustomerById = async (id: string, adminId: string) => {
+  const customer = await prisma.customer.findFirst({
+    where: { id, adminId }
+  });
+  if (!customer) {
+    throw new ApiError(404, "Customer not found");
+  }
+  return customer;
+};
+
+export const updateCustomer = async (id: string, data: any, adminId: string) => {
+  const existing = await prisma.customer.findFirst({
+    where: { id, adminId }
+  });
+  if (!existing) {
+    throw new ApiError(404, "Customer not found");
+  }
+
+  if (data.mobile && data.mobile !== existing.mobile) {
+    const mobileExists = await prisma.customer.findFirst({
+      where: { adminId, mobile: data.mobile }
+    });
+    if (mobileExists) throw new ApiError(400, "Customer with this mobile number already exists");
+  }
+
+  const rawName = data.fullName ?? data.name;
+  
+  return prisma.customer.update({
+    where: { id },
+    data: {
+      name: rawName !== undefined ? rawName : undefined,
+      mobile: data.mobile,
+      address: data.address,
+      milkType: data.milkType,
+      bankName: data.bankName,
+      accountNo: data.accountNo,
+      ifscCode: data.ifscCode,
+    }
+  });
+};
+
+export const toggleCustomerStatus = async (id: string, adminId: string) => {
+  const existing = await prisma.customer.findFirst({
+    where: { id, adminId }
+  });
+  if (!existing) {
+    throw new ApiError(404, "Customer not found");
+  }
+  return prisma.customer.update({
+    where: { id },
+    data: { isActive: !existing.isActive }
+  });
+};
+
 export const debugService = async () => {
   console.log('\n========================');
   console.log('[DEBUG SERVICE HIT]');

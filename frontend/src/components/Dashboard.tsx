@@ -8,6 +8,8 @@ import {
   useMilkStore,
   useFeedStore,
   useAdvanceStore,
+  useProfileStore,
+  useBillingStore,
   useTranslation,
 } from '../store';
 import type { Advance } from '../store';
@@ -36,6 +38,9 @@ import {
   Menu,
   X,
   Search,
+  Settings,
+  Building2,
+  Save,
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -52,6 +57,8 @@ export default function Dashboard() {
   const farmers = useFarmerStore((state) => state.farmers);
   const fetchFarmers = useFarmerStore((state) => state.fetchFarmers);
   const addFarmer = useFarmerStore((state) => state.createFarmer);
+  const updateFarmer = useFarmerStore((state) => state.updateFarmer);
+  const toggleFarmerStatus = useFarmerStore((state) => state.toggleFarmerStatus);
   const farmerError = useFarmerStore((state) => state.error);
 
   const rateCharts = useRateChartStore((state) => state.rateCharts);
@@ -59,9 +66,12 @@ export default function Dashboard() {
   const rateError = useRateChartStore((state) => state.error);
 
   const collections = useMilkStore((state) => state.collections);
+  const history = useMilkStore((state) => state.history);
   const fetchCollections = useMilkStore((state) => state.fetchCollections);
+  const fetchHistory = useMilkStore((state) => state.fetchHistory);
   const addCollectionEntry = useMilkStore((state) => state.createCollectionEntry);
   const deleteCollectionEntry = useMilkStore((state) => state.deleteCollectionEntry);
+  const updateCollectionEntry = useMilkStore((state) => state.updateCollectionEntry);
   const milkError = useMilkStore((state) => state.error);
 
   const dealers = useFeedStore((state) => state.dealers);
@@ -83,7 +93,19 @@ export default function Dashboard() {
   const advLoading = advStatus === 'loading';
   const advError = useAdvanceStore((state) => state.error);
 
-  const fetchError = adminError || farmerError || rateError || milkError || feedError || advError;
+  const profile = useProfileStore((state) => state.profile);
+  const fetchProfile = useProfileStore((state) => state.fetchProfile);
+  const updateProfile = useProfileStore((state) => state.updateProfile);
+  const isUpdatingProfile = useProfileStore((state) => state.status === 'loading');
+  const profileError = useProfileStore((state) => state.error);
+
+  const settlements = useBillingStore((state) => state.settlements);
+  const fetchSettlements = useBillingStore((state) => state.fetchSettlements);
+  const createSettlement = useBillingStore((state) => state.createSettlement);
+  const isSettlingBill = useBillingStore((state) => state.status === 'loading');
+  const billingError = useBillingStore((state) => state.error);
+
+  const fetchError = adminError || farmerError || rateError || milkError || feedError || advError || profileError || billingError;
 
   // Responsive sidebar drawer state
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -94,6 +116,8 @@ export default function Dashboard() {
       fetchDashboard();
       fetchFarmers();
       fetchRateCharts();
+      fetchProfile();
+      fetchSettlements();
 
       fetchCollections();
       fetchDealers();
@@ -110,10 +134,20 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [token]);
 
-
+  // Handle Milk Tab History Fetching
+  useEffect(() => {
+    if (dbTab === 'milk') {
+      const today = new Date().toISOString().split('T')[0];
+      if (milkStartDate === today && milkEndDate === today) {
+        fetchCollections();
+      } else {
+        fetchHistory(milkStartDate, milkEndDate);
+      }
+    }
+  }, [milkStartDate, milkEndDate, dbTab]);
 
   // Internal routing in Dashboard
-  const [dbTab, setDbTab] = useState<'overview' | 'milk' | 'farmers' | 'rates' | 'feed' | 'billing' | 'advances'>('overview');
+  const [dbTab, setDbTab] = useState<'overview' | 'milk' | 'farmers' | 'rates' | 'feed' | 'billing' | 'advances' | 'settings'>('overview');
 
   // Modal control states
   const [farmerModalOpen, setFarmerModalOpen] = useState(false);
@@ -130,9 +164,13 @@ export default function Dashboard() {
   const [fMobile, setFMobile] = useState('');
   const [fAddress, setFAddress] = useState('');
   const [fMilkType, setFMilkType] = useState<'COW' | 'BUFFALO' | 'MIX'>('COW');
+  const [fBankName, setFBankName] = useState('');
+  const [fAccountNo, setFAccountNo] = useState('');
+  const [fIfscCode, setFIfscCode] = useState('');
   const [farmerSuccessMsg, setFarmerSuccessMsg] = useState('');
   const [farmerErrorMsg, setFarmerErrorMsg] = useState('');
   const [isSubmittingFarmer, setIsSubmittingFarmer] = useState(false);
+  const [editFarmerId, setEditFarmerId] = useState<string | null>(null);
   const [isSubmittingMilk, setIsSubmittingMilk] = useState(false);
 
   // 2. ADD DEALER STATE
@@ -158,6 +196,10 @@ export default function Dashboard() {
   const [milkShift, setMilkShift] = useState<'MORNING' | 'EVENING'>('MORNING');
   const [milkSuccessMsg, setMilkSuccessMsg] = useState('');
   const [milkErrorMsg, setMilkErrorMsg] = useState('');
+  const [milkStartDate, setMilkStartDate] = useState(new Date().toISOString().split('T')[0]);
+  const [milkEndDate, setMilkEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [editMilkId, setEditMilkId] = useState<string | null>(null);
+  const [milkModalOpen, setMilkModalOpen] = useState(false);
 
   // 5. FEED SALE FORM STATE
   const [saleFarmerId, setSaleFarmerId] = useState('');
@@ -166,7 +208,7 @@ export default function Dashboard() {
   const [salePaidAmount, setSalePaidAmount] = useState('0');
   const [saleCredit, setSaleCredit] = useState(true);
 
-  // 6. BILLING (local: no billing endpoint on backend)
+  // 6. BILLING (persisted via billing store)
   const [billingFarmerId, setBillingFarmerId] = useState('');
   const [billingStartDate, setBillingStartDate] = useState(() => {
     const d = new Date();
@@ -174,9 +216,57 @@ export default function Dashboard() {
     return d.toISOString().split('T')[0];
   });
   const [billingEndDate, setBillingEndDate] = useState(new Date().toISOString().split('T')[0]);
-  const [settledBills, setSettledBills] = useState<any[]>([]);
 
-  // 7. ADVANCE FORM & FILTER STATES
+  // 7. SETTINGS / PROFILE FORM STATE
+  const [profOwnerName, setProfOwnerName] = useState(user?.ownerName || '');
+  const [profMobile, setProfMobile] = useState(user?.mobile || '');
+  const [profDairyName, setProfDairyName] = useState(user?.dairyName || '');
+  const [profVillage, setProfVillage] = useState(user?.village || '');
+  const [profTaluka, setProfTaluka] = useState(user?.taluka || '');
+  const [profDistrict, setProfDistrict] = useState(user?.district || '');
+  const [profState, setProfState] = useState(user?.state || '');
+  const [profCollectionType, setProfCollectionType] = useState<'FIXED_RATE' | 'FAT_BASED' | 'FAT_SNF_BASED'>(user?.collectionType || 'FAT_SNF_BASED');
+  const [profMilkType, setProfMilkType] = useState<'COW' | 'BUFFALO' | 'MIX'>(user?.milkType || 'COW');
+  const [profCollectionShift, setProfCollectionShift] = useState<'MORNING' | 'EVENING' | 'BOTH'>(user?.collectionShift || 'BOTH');
+  const [profPaymentPeriod, setProfPaymentPeriod] = useState<'DAILY' | 'WEEKLY' | 'BIWEEKLY' | 'MONTHLY'>(user?.paymentPeriod || 'WEEKLY');
+  const [profGstin, setProfGstin] = useState(user?.gstin || '');
+  const [profileSuccessMsg, setProfileSuccessMsg] = useState('');
+  const [profileFormError, setProfileFormError] = useState('');
+
+  // Sync profile form when profile/user loads or changes
+  useEffect(() => {
+    const src = profile || user;
+    if (src) {
+      if (src.ownerName) setProfOwnerName(src.ownerName);
+      if (src.mobile) setProfMobile(src.mobile);
+      if (src.dairyName) setProfDairyName(src.dairyName);
+      if (src.village) setProfVillage(src.village);
+      if (src.taluka) setProfTaluka(src.taluka);
+      if (src.district) setProfDistrict(src.district);
+      if (src.state) setProfState(src.state);
+      if (src.collectionType) setProfCollectionType(src.collectionType);
+      if (src.milkType) setProfMilkType(src.milkType);
+      if (src.collectionShift) setProfCollectionShift(src.collectionShift);
+      if (src.paymentPeriod) setProfPaymentPeriod(src.paymentPeriod);
+      if ((src as any).gstin) setProfGstin((src as any).gstin);
+    }
+  }, [profile, user]);
+
+  // Fetch milk history whenever date range, farmer, or token changes
+  useEffect(() => {
+    if (token) {
+      fetchHistory(billingStartDate, billingEndDate, billingFarmerId || undefined);
+    }
+  }, [token, billingStartDate, billingEndDate, billingFarmerId]);
+
+  // Auto-dismiss profile notification toasts after 4 seconds
+  useEffect(() => {
+    if (!profileSuccessMsg) return;
+    const timer = setTimeout(() => setProfileSuccessMsg(''), 4000);
+    return () => clearTimeout(timer);
+  }, [profileSuccessMsg]);
+
+  // 8. ADVANCE FORM & FILTER STATES
   const [advSearchQuery, setAdvSearchQuery] = useState('');
   const [advStatusFilter, setAdvStatusFilter] = useState<'ALL' | 'ACTIVE' | 'PARTIALLY_RECOVERED' | 'CLOSED'>('ALL');
   const [advCustomerId, setAdvCustomerId] = useState('');
@@ -285,12 +375,12 @@ export default function Dashboard() {
   // Backend `/milk/today` already filters for today's entries
   const todayCollections = collections;
 
-  // Billing (local calculation from cached collections)
+  // Billing (calculated from fetched history entries)
   const targetBillingFarmer = farmers.find(f => f.id === billingFarmerId);
-  const billingCollections = collections.filter(c =>
-    c.customerId === billingFarmerId &&
-    c.date >= billingStartDate &&
-    c.date <= billingEndDate
+  const billingCollections = history.filter(c =>
+    (!billingFarmerId || c.customerId === billingFarmerId) &&
+    (!billingStartDate || c.date >= billingStartDate) &&
+    (!billingEndDate || c.date <= billingEndDate)
   );
   const billingTotalQty = billingCollections.reduce((sum, c) => sum + c.quantity, 0);
   const billingTotalGross = billingCollections.reduce((sum, c) => sum + c.totalAmount, 0);
@@ -308,6 +398,14 @@ export default function Dashboard() {
     f.mobile.includes(searchQuery)
   );
 
+  const todayDateStr = new Date().toISOString().split('T')[0];
+  const displayCollections = (milkStartDate === todayDateStr && milkEndDate === todayDateStr) ? collections : history;
+
+  const milkTotalLitres = displayCollections.reduce((sum, c) => sum + c.quantity, 0);
+  const milkTotalAmount = displayCollections.reduce((sum, c) => sum + c.totalAmount, 0);
+  const milkAvgFat = displayCollections.length ? (displayCollections.reduce((sum, c) => sum + c.fat, 0) / displayCollections.length).toFixed(1) : '0.0';
+  const milkAvgSnf = displayCollections.length ? (displayCollections.reduce((sum, c) => sum + c.snf, 0) / displayCollections.length).toFixed(1) : '0.0';
+
   const navItems = [
     { id: 'overview', label: t('dashboard', 'navOverview'), icon: LayoutDashboard },
     { id: 'milk', label: t('dashboard', 'navMilkRegistry'), icon: Milk },
@@ -316,6 +414,7 @@ export default function Dashboard() {
     { id: 'feed', label: t('dashboard', 'navFeeds'), icon: ShoppingBag },
     { id: 'advances', label: t('dashboard', 'navAdvances'), icon: HandCoins },
     { id: 'billing', label: t('dashboard', 'navBilling'), icon: Coins },
+    { id: 'settings', label: t('dashboard', 'navSettings'), icon: Settings },
   ];
 
   // ── Handlers ───────────────────────────────────────────────────────────────
@@ -340,15 +439,16 @@ export default function Dashboard() {
       return;
     }
 
-    // 1. Check if farmer code already exists in local Zustand store BEFORE calling backend API
-    const codeNum = parseInt(trimmedCode, 10);
-    const codeExists = farmers.some(
-      (f) => String(f.code) === trimmedCode || (!isNaN(codeNum) && f.code === codeNum)
-    );
+    if (!editFarmerId) {
+      const codeNum = parseInt(trimmedCode, 10);
+      const codeExists = farmers.some(
+        (f) => String(f.code) === trimmedCode || (!isNaN(codeNum) && f.code === codeNum)
+      );
 
-    if (codeExists) {
-      setFarmerErrorMsg(t('customer', 'duplicateCodeToast'));
-      return;
+      if (codeExists) {
+        setFarmerErrorMsg(t('customer', 'duplicateCodeToast'));
+        return;
+      }
     }
 
     if (!trimmedName) {
@@ -364,17 +464,32 @@ export default function Dashboard() {
 
     setIsSubmittingFarmer(true);
     try {
-      const res = await addFarmer({
-        customerCode: trimmedCode,
-        fullName: trimmedName,
-        mobile: trimmedMobile,
-        address: fAddress.trim(),
-        milkType: fMilkType,
-      });
+      let res;
+      if (editFarmerId) {
+        res = await updateFarmer(editFarmerId, {
+          fullName: trimmedName,
+          mobile: trimmedMobile,
+          address: fAddress.trim(),
+          milkType: fMilkType,
+          bankName: fBankName.trim(),
+          accountNo: fAccountNo.trim(),
+          ifscCode: fIfscCode.trim(),
+        });
+      } else {
+        res = await addFarmer({
+          customerCode: trimmedCode,
+          fullName: trimmedName,
+          mobile: trimmedMobile,
+          address: fAddress.trim(),
+          milkType: fMilkType,
+        });
+      }
 
       if (res.success) {
         setFarmerModalOpen(false);
+        setEditFarmerId(null);
         setFCode(''); setFName(''); setFMobile(''); setFAddress('');
+        setFBankName(''); setFAccountNo(''); setFIfscCode('');
         setFarmerErrorMsg('');
         setFarmerSuccessMsg(t('customer', 'successToast'));
         fetchDashboard();
@@ -388,6 +503,30 @@ export default function Dashboard() {
       }
     } finally {
       setIsSubmittingFarmer(false);
+    }
+  };
+
+  const handleEditFarmerClick = (farmer: any) => {
+    setEditFarmerId(farmer.id);
+    setFCode(String(farmer.code));
+    setFName(farmer.name);
+    setFMobile(farmer.mobile);
+    setFAddress(farmer.address || '');
+    setFMilkType(farmer.milkType);
+    setFBankName(farmer.bankName || '');
+    setFAccountNo(farmer.accountNo || '');
+    setFIfscCode(farmer.ifscCode || '');
+    setFarmerErrorMsg('');
+    setFarmerSuccessMsg('');
+    setFarmerModalOpen(true);
+  };
+
+  const handleToggleFarmer = async (id: string, currentStatus: boolean) => {
+    const success = await toggleFarmerStatus(id);
+    if (success) {
+      setFarmerSuccessMsg(`Farmer ${currentStatus ? 'deactivated' : 'activated'} successfully.`);
+    } else {
+      setFarmerErrorMsg(`Failed to ${currentStatus ? 'deactivate' : 'activate'} farmer.`);
     }
   };
 
@@ -444,16 +583,18 @@ export default function Dashboard() {
       return;
     }
 
-    // Local check against existing collections in memory before triggering API
-    const todayStr = new Date().toISOString().split('T')[0];
-    const shiftExists = collections.some(
-      (c) => c.customerId === foundFarmer.id && c.shift === milkShift && (c.date === todayStr || !c.date)
-    );
+    // Local check against existing collections in memory before triggering API (ONLY IF CREATING)
+    if (!editMilkId) {
+      const todayStr = new Date().toISOString().split('T')[0];
+      const shiftExists = collections.some(
+        (c) => c.customerId === foundFarmer.id && c.shift === milkShift && (c.date === todayStr || !c.date)
+      );
 
-    if (shiftExists) {
-      setMilkSuccessMsg('');
-      setMilkErrorMsg(`Entry for ${milkShift} shift already exists on this date for ${foundFarmer.name}.`);
-      return;
+      if (shiftExists) {
+        setMilkSuccessMsg('');
+        setMilkErrorMsg(`Entry for ${milkShift} shift already exists on this date for ${foundFarmer.name}.`);
+        return;
+      }
     }
 
     setIsSubmittingMilk(true);
@@ -461,7 +602,7 @@ export default function Dashboard() {
       const finalRate = liveCalc?.rate ?? 0;
       const finalTotal = liveCalc ? liveCalc.amount : Number((qty * finalRate).toFixed(2));
 
-      const success = await addCollectionEntry({
+      const payload = {
         customerCode: foundFarmer.code,
         customerName: foundFarmer.name,
         customerId: foundFarmer.id,
@@ -473,20 +614,38 @@ export default function Dashboard() {
         rate: finalRate,
         totalAmount: finalTotal,
         rateChartId: liveCalc?.chartId,
-      });
+      };
+
+      let success;
+      if (editMilkId) {
+        success = await updateCollectionEntry(editMilkId, payload);
+      } else {
+        success = await addCollectionEntry(payload);
+      }
 
       if (success) {
         setMilkErrorMsg('');
-        setMilkSuccessMsg(`Entry saved for ${foundFarmer.name}! Rate: ₹${finalRate.toFixed(2)}/L, Total: ₹${finalTotal.toFixed(2)}`);
+        setMilkSuccessMsg(`Entry ${editMilkId ? 'updated' : 'saved'} for ${foundFarmer.name}! Rate: ₹${finalRate.toFixed(2)}/L, Total: ₹${finalTotal.toFixed(2)}`);
         setMilkQty(''); setMilkFat(''); setMilkSnf('');
+        if (editMilkId) setEditMilkId(null);
         fetchDashboard();
       } else {
         setMilkSuccessMsg('');
-        setMilkErrorMsg('Error saving entry. Duplicate shift for today may already exist.');
+        setMilkErrorMsg(`Error ${editMilkId ? 'updating' : 'saving'} entry.`);
       }
     } finally {
       setIsSubmittingMilk(false);
     }
+  };
+
+  const handleEditMilkClick = (c: MilkEntry) => {
+    setEditMilkId(c.id);
+    setSelectedFarmerCode(c.customerCode.toString());
+    setMilkQty(c.quantity.toString());
+    setMilkFat(c.fat.toString());
+    setMilkSnf(c.snf.toString());
+    setMilkShift(c.shift);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleFeedSaleSubmit = async (e: React.FormEvent) => {
@@ -517,21 +676,59 @@ export default function Dashboard() {
       alert('No collections to settle for this period.');
       return;
     }
-    const billObj = {
-      id: 'bill_' + Math.random().toString(36).substr(2, 9),
-      farmerCode: targetBillingFarmer.code,
-      farmerName: targetBillingFarmer.name,
-      period: `${billingStartDate} to ${billingEndDate}`,
+    const success = await createSettlement({
+      customerId: targetBillingFarmer.id,
+      startDate: billingStartDate,
+      endDate: billingEndDate,
+      totalAmount: billingTotalGross,
+      netPayable: billingNetPayable,
       litres: billingTotalQty,
       avgFat,
       avgSnf,
-      gross: billingTotalGross,
-      net: billingNetPayable,
-      date: new Date().toISOString().split('T')[0],
-    };
-    setSettledBills([billObj, ...settledBills]);
-    alert(`Bill settled successfully for ₹${billingNetPayable}!`);
-    setBillingFarmerId('');
+      milkEntryIds: billingCollections.map((c) => c.id),
+      remarks: `Settlement for ${targetBillingFarmer.name} (${billingStartDate} to ${billingEndDate})`,
+    });
+
+    if (success) {
+      alert(`Bill settled successfully for ₹${billingNetPayable}!`);
+      setBillingFarmerId('');
+      fetchSettlements();
+    } else {
+      alert(billingError || 'Failed to settle bill');
+    }
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setProfileFormError('');
+    setProfileSuccessMsg('');
+
+    if (!profOwnerName.trim() || !profMobile.trim() || !profDairyName.trim()) {
+      setProfileFormError('Owner name, mobile number, and dairy name are required.');
+      return;
+    }
+
+    const ok = await updateProfile({
+      ownerName: profOwnerName.trim(),
+      mobile: profMobile.trim(),
+      dairyName: profDairyName.trim(),
+      village: profVillage.trim(),
+      taluka: profTaluka.trim(),
+      district: profDistrict.trim(),
+      state: profState.trim(),
+      collectionType: profCollectionType,
+      milkType: profMilkType,
+      collectionShift: profCollectionShift,
+      paymentPeriod: profPaymentPeriod,
+      gstin: profGstin.trim() || undefined,
+    });
+
+    if (ok) {
+      setProfileSuccessMsg('Profile and dairy settings updated successfully!');
+      fetchDashboard();
+    } else {
+      setProfileFormError(profileError || 'Failed to update profile.');
+    }
   };
 
   const handleCreateAdvanceSubmit = async (e: React.FormEvent) => {
@@ -1053,21 +1250,73 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                <button
-                  type="submit"
-                  disabled={isSubmittingMilk}
-                  className="w-full bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold text-xs py-2.5 rounded-lg transition shadow-md cursor-pointer flex items-center justify-center gap-2"
-                >
-                  {isSubmittingMilk ? 'Saving Entry...' : t('dashboard', 'saveMilkCollection')}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={isSubmittingMilk}
+                    className="w-full bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold text-xs py-2.5 rounded-lg transition shadow-md cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    {isSubmittingMilk ? 'Saving Entry...' : (editMilkId ? 'Update Entry' : t('dashboard', 'saveMilkCollection'))}
+                  </button>
+                  {editMilkId && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditMilkId(null);
+                        setMilkQty(''); setMilkFat(''); setMilkSnf('');
+                      }}
+                      className="w-1/3 bg-gray-100 hover:bg-gray-200 text-gray-700 font-bold text-xs py-2.5 rounded-lg transition cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
               </form>
             </div>
 
             {/* Today's log */}
             <div className="lg:col-span-8 light-panel rounded-xl p-6">
-              <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">
-                {t('dashboard', 'todaysMilkLog')}
-              </h3>
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 pb-2 border-b">
+                <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider">
+                  {t('dashboard', 'todaysMilkLog')}
+                </h3>
+                <div className="flex items-center gap-3 mt-3 sm:mt-0">
+                  <div className="flex flex-col">
+                    <label className="text-[10px] text-gray-500 font-bold uppercase">From</label>
+                    <input 
+                      type="date" 
+                      value={milkStartDate} 
+                      onChange={(e) => setMilkStartDate(e.target.value)}
+                      className="light-input text-xs py-1 px-2 rounded w-32"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-[10px] text-gray-500 font-bold uppercase">To</label>
+                    <input 
+                      type="date" 
+                      value={milkEndDate} 
+                      onChange={(e) => setMilkEndDate(e.target.value)}
+                      className="light-input text-xs py-1 px-2 rounded w-32"
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div className="bg-blue-50 border border-blue-100 p-3 rounded-lg text-center">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">Total Litres</p>
+                  <p className="text-lg font-black text-blue-700">{milkTotalLitres.toFixed(1)} L</p>
+                </div>
+                <div className="bg-amber-50 border border-amber-100 p-3 rounded-lg text-center">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">Avg FAT / SNF</p>
+                  <p className="text-lg font-black text-amber-700">{milkAvgFat}% / {milkAvgSnf}%</p>
+                </div>
+                <div className="bg-green-50 border border-green-100 p-3 rounded-lg text-center md:col-span-2">
+                  <p className="text-[10px] text-gray-500 font-bold uppercase">Total Valuation</p>
+                  <p className="text-lg font-black text-green-700">₹{milkTotalAmount.toFixed(2)}</p>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
@@ -1083,11 +1332,11 @@ export default function Dashboard() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
-                    {collections.length === 0 ? (
+                    {displayCollections.length === 0 ? (
                       <tr>
-                        <td colSpan={8} className="py-8 text-center text-gray-400">{t('dashboard', 'noEntriesToday')}</td>
+                        <td colSpan={9} className="py-8 text-center text-gray-400">{t('dashboard', 'noEntriesToday')}</td>
                       </tr>
-                    ) : collections.map((c) => (
+                    ) : displayCollections.map((c) => (
                       <tr key={c.id} className="hover:bg-gray-50">
                         <td className="py-2.5 font-bold text-[#0052cc]">{c.customerCode}</td>
                         <td className="py-2.5 font-semibold text-[#091e42]">{c.customerName}</td>
@@ -1100,7 +1349,10 @@ export default function Dashboard() {
                         <td className="py-2.5 font-mono text-gray-500">{c.fat}% / {c.snf}%</td>
                         <td className="py-2.5 text-right font-mono font-medium">₹{c.rate.toFixed(2)}</td>
                         <td className="py-2.5 text-right font-mono font-bold text-[#091e42]">₹{c.totalAmount.toFixed(2)}</td>
-                        <td className="py-2.5 text-right">
+                        <td className="py-2.5 text-right space-x-1">
+                          <button onClick={() => handleEditMilkClick(c)} className="p-1 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition cursor-pointer font-bold text-[10px]">
+                            EDIT
+                          </button>
                           <button onClick={() => handleBillDelete(c.id)} className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 rounded transition cursor-pointer">
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -1156,6 +1408,8 @@ export default function Dashboard() {
                       <th className="py-3">{t('customer', 'tableMobile')}</th>
                       <th className="py-3">{t('customer', 'tableMilkType')}</th>
                       <th className="py-3">{t('customer', 'tableAddress')}</th>
+                      <th className="py-3 text-right">Advance Bal</th>
+                      <th className="py-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200 text-gray-700">
@@ -1166,12 +1420,23 @@ export default function Dashboard() {
                         </td>
                       </tr>
                     ) : filteredFarmers.map((f) => (
-                      <tr key={f.id} className="hover:bg-gray-50">
-                        <td className="py-3.5 font-bold text-[#0052cc]">{f.code}</td>
+                      <tr key={f.id} className={`hover:bg-gray-50 ${!f.isActive ? 'opacity-50' : ''}`}>
+                        <td className="py-3.5 font-bold text-[#0052cc]">
+                          {f.code} {!f.isActive && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded ml-1">Inactive</span>}
+                        </td>
                         <td className="py-3.5 font-semibold text-[#091e42]">{f.name}</td>
                         <td className="py-3.5 text-gray-500">{f.mobile}</td>
                         <td className="py-3.5 font-medium">{f.milkType}</td>
                         <td className="py-3.5 text-gray-500">{f.address || '—'}</td>
+                        <td className={`py-3.5 text-right font-bold ${f.advanceBalance > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
+                          ₹{f.advanceBalance?.toFixed(2) || '0.00'}
+                        </td>
+                        <td className="py-3.5 text-right space-x-2">
+                          <button onClick={() => handleEditFarmerClick(f)} className="text-blue-600 hover:text-blue-800 font-semibold text-[11px] cursor-pointer">Edit</button>
+                          <button onClick={() => handleToggleFarmer(f.id, f.isActive)} className={`${f.isActive ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'} font-semibold text-[11px] cursor-pointer`}>
+                            {f.isActive ? 'Deactivate' : 'Activate'}
+                          </button>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -1296,14 +1561,14 @@ export default function Dashboard() {
         )}
 
         {/* ══════════════════════════════════════════════════════════════
-            6. BILLING & SETTLEMENT (local — no billing backend endpoint)
+            6. BILLING & SETTLEMENT (Persistent via Backend Store)
         ══════════════════════════════════════════════════════════════ */}
         {dbTab === 'billing' && (
           <div className="space-y-6">
 
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 text-xs p-4 rounded-xl flex items-start gap-2">
-              <Info className="w-4 h-4 shrink-0 mt-0.5" />
-              <span>Billing uses milk data fetched from the database. Settlement records are local session-only (no billing endpoint exists on the backend yet).</span>
+            <div className="bg-blue-50 border border-blue-200 text-[#0747a6] text-xs p-4 rounded-xl flex items-start gap-2">
+              <CheckCircle className="w-4 h-4 shrink-0 mt-0.5 text-[#0052cc]" />
+              <span>Billing calculates payouts using live database records across your custom date range. Settlements are recorded and stored permanently on the server.</span>
             </div>
 
             <div className="light-panel p-6 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
@@ -1332,7 +1597,7 @@ export default function Dashboard() {
                   </h3>
                   {billingCollections.length === 0 ? (
                     <div className="text-center py-6 text-xs text-gray-400 bg-gray-50 border border-dashed border-gray-300 rounded-lg">
-                      No collections in this period.
+                      No collections found in this period for {targetBillingFarmer.name}.
                     </div>
                   ) : (
                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
@@ -1370,19 +1635,19 @@ export default function Dashboard() {
                   </div>
                   <button
                     onClick={handleBillSettlement}
-                    disabled={billingCollections.length === 0}
-                    className="w-full bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold text-xs py-2.5 rounded-lg transition shadow-md cursor-pointer"
+                    disabled={billingCollections.length === 0 || isSettlingBill}
+                    className="w-full bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold text-xs py-2.5 rounded-lg transition shadow-md cursor-pointer flex items-center justify-center gap-2"
                   >
-                    Confirm Settlement
+                    {isSettlingBill ? 'Settling...' : 'Confirm Settlement'}
                   </button>
                 </div>
               </div>
             )}
 
-            {settledBills.length > 0 && (
+            {settlements.length > 0 && (
               <div className="light-panel rounded-xl p-6">
                 <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider mb-4 border-b pb-2">
-                  Settled Bills History ({settledBills.length})
+                  Settled Bills History ({settlements.length})
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-left text-xs border-collapse">
@@ -1396,13 +1661,13 @@ export default function Dashboard() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-200 text-gray-700">
-                      {settledBills.map((b) => (
+                      {settlements.map((b) => (
                         <tr key={b.id} className="hover:bg-gray-50">
-                          <td className="py-2.5 text-gray-500">{b.date}</td>
-                          <td className="py-2.5 font-semibold text-[#091e42]">{b.farmerName} ({b.farmerCode})</td>
+                          <td className="py-2.5 text-gray-500">{b.createdAt ? new Date(b.createdAt).toLocaleDateString() : '—'}</td>
+                          <td className="py-2.5 font-semibold text-[#091e42]">{b.customerName} ({b.customerCode})</td>
                           <td className="py-2.5 text-gray-500 text-[10px]">{b.period}</td>
                           <td className="py-2.5 font-mono">{b.litres.toFixed(1)} L</td>
-                          <td className="py-2.5 text-right font-mono font-extrabold text-green-600">₹{b.net}</td>
+                          <td className="py-2.5 text-right font-mono font-extrabold text-green-600">₹{b.netPayable.toFixed(2)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -1566,6 +1831,222 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* ══════════════════════════════════════════════════════════════
+            8. SETTINGS & PROFILE MANAGEMENT PANEL
+        ══════════════════════════════════════════════════════════════ */}
+        {dbTab === 'settings' && (
+          <div className="space-y-6 max-w-5xl">
+            {/* Header banner */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-2 border-b border-gray-200">
+              <div>
+                <h2 className="text-xl font-black text-[#091e42] tracking-tight">Dairy & Profile Settings</h2>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Update your personal contact details, dairy establishment location, and collection/payment rules.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleSaveProfile}
+                disabled={isUpdatingProfile}
+                className="bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold text-xs py-2 px-4 rounded-lg transition shadow flex items-center gap-1.5 cursor-pointer self-start sm:self-auto"
+              >
+                <Save className="w-3.5 h-3.5" />
+                {isUpdatingProfile ? 'Saving...' : 'Save All Changes'}
+              </button>
+            </div>
+
+            {profileSuccessMsg && (
+              <div className="p-3.5 bg-green-50 border border-green-200 text-green-700 text-xs rounded-xl font-medium flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 shrink-0" />
+                <span>{profileSuccessMsg}</span>
+              </div>
+            )}
+
+            {profileFormError && (
+              <div className="p-3.5 bg-red-50 border border-red-200 text-red-700 text-xs rounded-xl font-medium flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0" />
+                <span>{profileFormError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleSaveProfile} className="space-y-6">
+              {/* Card 1: Owner & Account Info */}
+              <div className="light-panel rounded-xl p-6 space-y-4">
+                <div className="flex items-center gap-2 border-b pb-3">
+                  <Users className="w-4 h-4 text-[#0052cc]" />
+                  <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider">Owner & Account Details</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">Owner Name *</label>
+                    <input
+                      type="text"
+                      value={profOwnerName}
+                      onChange={(e) => setProfOwnerName(e.target.value)}
+                      placeholder="e.g. Ramesh Patil"
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-3"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">Primary Mobile Number *</label>
+                    <input
+                      type="tel"
+                      value={profMobile}
+                      onChange={(e) => setProfMobile(e.target.value)}
+                      placeholder="e.g. 9876543210"
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-3 font-mono"
+                      required
+                    />
+                    <span className="text-[10px] text-gray-400 mt-1 block">Used for authentication and SMS notifications.</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Dairy Establishment Info */}
+              <div className="light-panel rounded-xl p-6 space-y-4">
+                <div className="flex items-center gap-2 border-b pb-3">
+                  <Building2 className="w-4 h-4 text-[#0052cc]" />
+                  <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider">Dairy Location & Registry</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-gray-600">Dairy / Center Name *</label>
+                    <input
+                      type="text"
+                      value={profDairyName}
+                      onChange={(e) => setProfDairyName(e.target.value)}
+                      placeholder="e.g. Gokul Dudh Sankalan Kendra"
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-3"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">GSTIN / Tax ID (Optional)</label>
+                    <input
+                      type="text"
+                      value={profGstin}
+                      onChange={(e) => setProfGstin(e.target.value)}
+                      placeholder="e.g. 27AAAAA0000A1Z5"
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-3 uppercase font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">Village / Town</label>
+                    <input
+                      type="text"
+                      value={profVillage}
+                      onChange={(e) => setProfVillage(e.target.value)}
+                      placeholder="e.g. Khed"
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">Taluka / Sub-district</label>
+                    <input
+                      type="text"
+                      value={profTaluka}
+                      onChange={(e) => setProfTaluka(e.target.value)}
+                      placeholder="e.g. Shirur"
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-3"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">District & State</label>
+                    <div className="grid grid-cols-2 gap-2 mt-1">
+                      <input
+                        type="text"
+                        value={profDistrict}
+                        onChange={(e) => setProfDistrict(e.target.value)}
+                        placeholder="District"
+                        className="w-full light-input rounded-lg text-xs py-2 px-3"
+                      />
+                      <input
+                        type="text"
+                        value={profState}
+                        onChange={(e) => setProfState(e.target.value)}
+                        placeholder="State"
+                        className="w-full light-input rounded-lg text-xs py-2 px-3"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 3: Collection Defaults & Business Rules */}
+              <div className="light-panel rounded-xl p-6 space-y-4">
+                <div className="flex items-center gap-2 border-b pb-3">
+                  <Coins className="w-4 h-4 text-[#0052cc]" />
+                  <h3 className="text-sm font-bold text-[#091e42] uppercase tracking-wider">Collection & Payment Rules</h3>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">Rate Calculation</label>
+                    <select
+                      value={profCollectionType}
+                      onChange={(e) => setProfCollectionType(e.target.value as any)}
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-2"
+                    >
+                      <option value="FAT_SNF_BASED">FAT + SNF Based</option>
+                      <option value="FAT_BASED">FAT Only Based</option>
+                      <option value="FIXED_RATE">Fixed Rate per Litre</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">Default Milk Type</label>
+                    <select
+                      value={profMilkType}
+                      onChange={(e) => setProfMilkType(e.target.value as any)}
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-2"
+                    >
+                      <option value="COW">Cow Milk</option>
+                      <option value="BUFFALO">Buffalo Milk</option>
+                      <option value="MIX">Mix Milk</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">Collection Shifts</label>
+                    <select
+                      value={profCollectionShift}
+                      onChange={(e) => setProfCollectionShift(e.target.value as any)}
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-2"
+                    >
+                      <option value="BOTH">Morning & Evening (Both)</option>
+                      <option value="MORNING">Morning Only</option>
+                      <option value="EVENING">Evening Only</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-600">Payment Period</label>
+                    <select
+                      value={profPaymentPeriod}
+                      onChange={(e) => setProfPaymentPeriod(e.target.value as any)}
+                      className="mt-1 w-full light-input rounded-lg text-xs py-2 px-2"
+                    >
+                      <option value="WEEKLY">Weekly Cycle (7 Days)</option>
+                      <option value="BIWEEKLY">Bi-Weekly (15 Days)</option>
+                      <option value="MONTHLY">Monthly Cycle (30 Days)</option>
+                      <option value="DAILY">Daily Settlement</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Submit footer */}
+              <div className="flex items-center justify-end gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isUpdatingProfile}
+                  className="bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold text-xs py-2.5 px-6 rounded-lg transition shadow-md flex items-center gap-2 cursor-pointer"
+                >
+                  <Save className="w-4 h-4" />
+                  {isUpdatingProfile ? 'Saving Changes...' : 'Save Settings'}
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
+
         </div>
 
       {/* ══════════════════════════════════════════════════════════════
@@ -1576,7 +2057,9 @@ export default function Dashboard() {
           <div className="absolute inset-0 bg-[#091e42]/60 backdrop-blur-sm" onClick={() => setFarmerModalOpen(false)} />
           <div className="relative w-full max-w-md bg-white border border-gray-200 rounded-xl overflow-hidden z-10 shadow-2xl max-h-[90vh] overflow-y-auto mx-4">
             <div className="flex items-center justify-between px-5 py-3.5 border-b border-gray-200 bg-[#f4f5f7]">
-              <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">{t('customer', 'registerModalTitle')}</h4>
+              <h4 className="text-xs font-bold text-[#091e42] uppercase tracking-wider">
+                {editFarmerId ? 'Edit Farmer Details' : t('customer', 'registerModalTitle')}
+              </h4>
               <button onClick={() => setFarmerModalOpen(false)} className="text-gray-500 hover:text-black font-bold cursor-pointer">×</button>
             </div>
             <form onSubmit={handleAddFarmerSubmit} className="p-5 space-y-4 text-xs">
@@ -1594,8 +2077,9 @@ export default function Dashboard() {
                   value={fCode}
                   onChange={(e) => setFCode(e.target.value)}
                   placeholder={t('customer', 'customerCodePlaceholder')}
-                  className="mt-1 w-full light-input rounded py-1.5 px-2.5"
+                  className="mt-1 w-full light-input rounded py-1.5 px-2.5 disabled:opacity-50"
                   maxLength={20}
+                  disabled={!!editFarmerId}
                   required
                 />
               </div>
@@ -1649,6 +2133,25 @@ export default function Dashboard() {
                 />
               </div>
 
+              {/* 6. Bank Details */}
+              <div className="pt-2 mt-2 border-t border-gray-100">
+                <h5 className="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-wider">Bank Details (Optional)</h5>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Bank Name</label>
+                    <input type="text" value={fBankName} onChange={(e) => setFBankName(e.target.value)} placeholder="e.g. State Bank of India" className="mt-1 w-full light-input rounded py-1.5 px-2.5" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">Account No</label>
+                    <input type="text" value={fAccountNo} onChange={(e) => setFAccountNo(e.target.value)} placeholder="e.g. 1234567890" className="mt-1 w-full light-input rounded py-1.5 px-2.5" />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-gray-500 uppercase tracking-wider">IFSC Code</label>
+                    <input type="text" value={fIfscCode} onChange={(e) => setFIfscCode(e.target.value)} placeholder="e.g. SBIN0001234" className="mt-1 w-full light-input rounded py-1.5 px-2.5" />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button
                   type="button"
@@ -1662,7 +2165,7 @@ export default function Dashboard() {
                   disabled={isSubmittingFarmer}
                   className="flex-1 bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-blue-300 text-white font-bold py-2 rounded transition cursor-pointer flex items-center justify-center gap-2"
                 >
-                  {isSubmittingFarmer ? 'Registering...' : t('customer', 'registerSubmit')}
+                  {isSubmittingFarmer ? (editFarmerId ? 'Saving...' : 'Registering...') : (editFarmerId ? 'Save Changes' : t('customer', 'registerSubmit'))}
                 </button>
               </div>
             </form>

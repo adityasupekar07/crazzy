@@ -9,11 +9,16 @@ from "../../middleware/validate.middleware.js";
 
 import {
     addCustomer,
-    getCustomers,debugCustomerApi
+    getCustomers,
+    getCustomerById,
+    updateCustomer,
+    toggleCustomerStatus,
+    debugCustomerApi
 } from "./customer.controller.js";
 
 import {
     addCustomerSchema,
+    updateCustomerSchema
 } from "./customer.schema.js";
 
 const router = Router();
@@ -49,6 +54,25 @@ router.get(
     authMiddleware,
 
     getCustomers
+);
+
+router.get(
+    "/:id",
+    authMiddleware,
+    getCustomerById
+);
+
+router.patch(
+    "/:id",
+    authMiddleware,
+    validate({ body: updateCustomerSchema }),
+    updateCustomer
+);
+
+router.delete(
+    "/:id",
+    authMiddleware,
+    toggleCustomerStatus
 );
 
 router.get(

@@ -5,6 +5,7 @@ export * from './feed/useFeedStore';
 export * from './advance/useAdvanceStore';
 export * from './rate-chart/useRateChartStore';
 export * from './profile/useProfileStore';
+export * from './billing/useBillingStore';
 export * from './dashboard/useDashboardStore';
 export * from './language/useLanguageStore';
 export * from './ui/useUIStore';
@@ -32,6 +33,7 @@ export function useAdminStore<T = any>(selector?: (state: any) => T): T {
     status: profileState.status === 'error' || dashboardState.status === 'error' ? 'error' : profileState.status,
     error: profileState.error || dashboardState.error,
     fetchProfile: profileState.fetchProfile,
+    updateProfile: profileState.updateProfile,
     fetchDashboard: dashboardState.fetchDashboard,
     reset: () => {
       profileState.reset();

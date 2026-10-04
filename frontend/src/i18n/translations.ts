@@ -142,6 +142,7 @@ export interface Translations {
     navFeeds: string;
     navBilling: string;
     navAdvances: string;
+    navSettings: string;
     landingView: string;
     logOut: string;
     activeDairyHub: string;
@@ -455,6 +456,7 @@ export const translations: Record<Language, Translations> = {
       navFeeds: 'Feeds & Sales',
       navBilling: 'Settle Billing',
       navAdvances: 'Advance Ledger',
+      navSettings: 'Settings & Profile',
       landingView: 'Landing View',
       logOut: 'Log Out',
       activeDairyHub: 'Active Dairy Hub',
@@ -766,6 +768,7 @@ export const translations: Record<Language, Translations> = {
       navFeeds: 'पशु आहार एवं बिक्री',
       navBilling: 'बिल निपटान',
       navAdvances: 'अग्रिम लेजर',
+      navSettings: 'सेटिंग्स और प्रोफ़ाइल',
       landingView: 'मुख्य पृष्ठ',
       logOut: 'लॉग आउट',
       activeDairyHub: 'सक्रिय डेयरी हब',
@@ -1077,6 +1080,7 @@ export const translations: Record<Language, Translations> = {
       navFeeds: 'पशूखाद्य व विक्री',
       navBilling: 'बिल सेटलमेंट',
       navAdvances: 'ॲडव्हान्स लेजर',
+      navSettings: 'सेटिंग्ज आणि प्रोफाइल',
       landingView: 'मुख्य पृष्ठ',
       logOut: 'लॉग आउट',
       activeDairyHub: 'सक्रिय डेअरी हब',

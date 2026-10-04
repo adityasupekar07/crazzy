@@ -14,6 +14,7 @@ import {
     deleteMilkEntry,
     getTodayMilkEntries,
     getMilkEntriesByDate,
+    getMilkHistory,
 } from "./milkEntry.controller.js";
 
 import {
@@ -50,20 +51,33 @@ router.get(
     getTodayMilkEntries
 );
 
-
 /**
  * =====================================================
- * GET CUSTOMER MILK ENTRIES
+ * GET MILK HISTORY (DATE RANGE)
  * =====================================================
  */
 
-// router.get(
-//     "/customer/:customerId",
+router.get(
+    "/history",
 
-//     authMiddleware,
+    authMiddleware,
 
-//     getCustomerMilkEntries
-// );
+    getMilkHistory
+);
+
+/**
+ * =====================================================
+ * GET MILK ENTRIES BY DATE
+ * =====================================================
+ */
+
+router.get(
+    "/milk-entry/by-date",
+
+    authMiddleware,
+
+    getMilkEntriesByDate
+);
 
 /**
  * =====================================================
@@ -78,13 +92,6 @@ router.get(
 
     getMilkEntryById
 );
-router.get(
-    "/milk-entry/by-date",
-
-    authMiddleware,
-
-
-    getMilkEntriesByDate);
 
 
 

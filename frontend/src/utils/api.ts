@@ -1,4 +1,4 @@
-const API_BASE_URL = 'http://127.0.0.1:5000/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:5000/api/v1';
 
 export async function request<T = any>(
   endpoint: string,
@@ -36,9 +36,16 @@ export async function request<T = any>(
     throw new Error('Invalid JSON format returned from server');
   }
 
-  if (!response.ok) {
-    throw new Error(json.message || `Request failed with status ${response.status}`);
+  if (response.status === 401) {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    window.dispatchEvent(new Event('auth-error'));
+    throw new Error('Session expired. Please log in again.');
   }
 
-  return json.data;
+  if (!response.ok) {
+    throw new Error(json?.message || `Request failed with status ${response.status}`);
+  }
+
+  return json?.data;
 }

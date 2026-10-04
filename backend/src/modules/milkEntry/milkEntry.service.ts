@@ -756,7 +756,57 @@ const getMilkEntriesByDate =
 
     return response;
   };
+
+// ========================================
+// GET MILK HISTORY (DATE RANGE & CUSTOMER)
+// ========================================
+
+const getMilkHistory = async (
+  adminId: string,
+  startDate?: string,
+  endDate?: string,
+  customerId?: string
+) => {
+  const whereClause: any = {
+    customer: {
+      adminId,
+    },
+  };
+
+  if (customerId) {
+    whereClause.customerId = customerId;
+  }
+
+  if (startDate || endDate) {
+    whereClause.date = {};
+    if (startDate) {
+      const start = new Date(startDate);
+      start.setHours(0, 0, 0, 0);
+      whereClause.date.gte = start;
+    }
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      whereClause.date.lte = end;
+    }
+  }
+
+  const entries = await prisma.milkEntry.findMany({
+    where: whereClause,
+    include: {
+      customer: true,
+      rateChart: true,
+    },
+    orderBy: {
+      date: "desc",
+    },
+  });
+
+  return entries;
+};
+
 export const milkEntryService = {
+  getMilkHistory,
   getMilkEntriesByDate,
   getTodayMilkEntries,
 

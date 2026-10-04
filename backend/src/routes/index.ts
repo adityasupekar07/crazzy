@@ -9,6 +9,7 @@ import foodDealerRoutes from "../modules/foodDealers/foodDealer.routes.js";
 import foodPurchaseRoutes from "../modules/foodPurchases/foodPurchase.routes.js";
 import foodSaleRoutes from "../modules/foodSales/foodSale.routes.js";
 import advanceRoutes from "../modules/Advance/advance.routes.js";
+import billingRoutes from "../modules/billing/billing.routes.js";
 
 const router = Router();
 
@@ -67,7 +68,9 @@ router.use(
     advanceRoutes
 );
 
-
-
+router.use(
+    "/billing",
+    billingRoutes
+);
 
 export default router;
