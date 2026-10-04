@@ -92,6 +92,8 @@ model Customer {
 
   milkType MilkType
 
+  isActive Boolean @default(true)
+
   /**
    * RELATION
    */

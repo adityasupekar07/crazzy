@@ -73,7 +73,11 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     set({ status: 'loading', error: null });
     try {
       const data = await request<Customer[]>('/customer/all-customers');
-      set({ farmers: data ?? [], status: 'success' });
+      const normalized = (data ?? []).map(c => ({
+        ...c,
+        isActive: c.isActive !== false,
+      }));
+      set({ farmers: normalized, status: 'success' });
     } catch (err: any) {
       console.error('Failed to fetch customers:', err.message);
       set({ status: 'error', error: err.message });
@@ -101,9 +105,13 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       };
 
       const res = await request<Customer>('/customer/create-new', 'POST', payload);
+      const normalizedFarmer: Customer = {
+        ...res,
+        isActive: res?.isActive !== false,
+      };
 
-      set({ farmers: [res, ...farmers], status: 'success' });
-      return { success: true, farmer: res };
+      set({ farmers: [normalizedFarmer, ...farmers], status: 'success' });
+      return { success: true, farmer: normalizedFarmer };
     } catch (err: any) {
       const errMsg = err.message || 'Unable to register farmer';
       set({ error: errMsg, status: 'error' });
@@ -131,7 +139,7 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
       const res = await request<Customer>(`/customer/${id}`, 'PATCH', payload);
       
       const { farmers } = get();
-      const updatedFarmers = farmers.map(f => f.id === id ? res : f);
+      const updatedFarmers = farmers.map(f => f.id === id ? { ...f, ...res, isActive: res.isActive ?? f.isActive ?? true } : f);
       
       set({ farmers: updatedFarmers, status: 'success' });
       return { success: true, farmer: res };
@@ -148,7 +156,13 @@ export const useCustomerStore = create<CustomerState>((set, get) => ({
     try {
       const res = await request<Customer>(`/customer/${id}`, 'DELETE');
       const { farmers } = get();
-      const updatedFarmers = farmers.map(f => f.id === id ? res : f);
+      const updatedFarmers = farmers.map(f => {
+        if (f.id === id) {
+          const nextActive = res && typeof res.isActive === 'boolean' ? res.isActive : !f.isActive;
+          return { ...f, ...res, isActive: nextActive };
+        }
+        return f;
+      });
       set({ farmers: updatedFarmers, status: 'success' });
       return true;
     } catch (err: any) {

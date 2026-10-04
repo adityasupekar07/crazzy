@@ -118,7 +118,13 @@ export const toggleCustomerStatus = async (id: string, adminId: string) => {
   if (!existing) {
     throw new ApiError(404, "Customer not found");
   }
-  return existing;
+  const nextStatus = existing.isActive !== undefined ? !existing.isActive : false;
+  return prisma.customer.update({
+    where: { id },
+    data: {
+      isActive: nextStatus,
+    }
+  });
 };
 
 export const debugService = async () => {

@@ -1608,26 +1608,29 @@ export default function Dashboard() {
                           {searchQuery ? t('customer', 'noSearchResults') : t('customer', 'emptyState')}
                         </td>
                       </tr>
-                    ) : filteredFarmers.map((f) => (
-                      <tr key={f.id} className={`hover:bg-gray-50 ${!f.isActive ? 'opacity-50' : ''}`}>
-                        <td className="py-3.5 font-bold text-[#0052cc]">
-                          {f.code} {!f.isActive && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded ml-1">Inactive</span>}
-                        </td>
-                        <td className="py-3.5 font-semibold text-[#091e42]">{f.name}</td>
-                        <td className="py-3.5 text-gray-500">{f.mobile}</td>
-                        <td className="py-3.5 font-medium">{f.milkType}</td>
-                        <td className="py-3.5 text-gray-500">{f.address || '—'}</td>
-                        <td className={`py-3.5 text-right font-bold ${f.advanceBalance > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
-                          ₹{f.advanceBalance?.toFixed(2) || '0.00'}
-                        </td>
-                        <td className="py-3.5 text-right space-x-2">
-                          <button onClick={() => handleEditFarmerClick(f)} className="text-blue-600 hover:text-blue-800 font-semibold text-[11px] cursor-pointer">Edit</button>
-                          <button onClick={() => handleToggleFarmer(f.id, f.isActive)} className={`${f.isActive ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'} font-semibold text-[11px] cursor-pointer`}>
-                            {f.isActive ? 'Deactivate' : 'Activate'}
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    ) : filteredFarmers.map((f) => {
+                      const isFarmerActive = f.isActive !== false;
+                      return (
+                        <tr key={f.id} className={`hover:bg-gray-50 ${!isFarmerActive ? 'opacity-50' : ''}`}>
+                          <td className="py-3.5 font-bold text-[#0052cc]">
+                            {f.code} {!isFarmerActive && <span className="text-[10px] bg-red-100 text-red-700 px-1.5 py-0.5 rounded ml-1">Inactive</span>}
+                          </td>
+                          <td className="py-3.5 font-semibold text-[#091e42]">{f.name}</td>
+                          <td className="py-3.5 text-gray-500">{f.mobile}</td>
+                          <td className="py-3.5 font-medium">{f.milkType}</td>
+                          <td className="py-3.5 text-gray-500">{f.address || '—'}</td>
+                          <td className={`py-3.5 text-right font-bold ${f.advanceBalance > 0 ? 'text-amber-600' : 'text-gray-500'}`}>
+                            ₹{f.advanceBalance?.toFixed(2) || '0.00'}
+                          </td>
+                          <td className="py-3.5 text-right space-x-2">
+                            <button onClick={() => handleEditFarmerClick(f)} className="text-blue-600 hover:text-blue-800 font-semibold text-[11px] cursor-pointer">Edit</button>
+                            <button onClick={() => handleToggleFarmer(f.id, isFarmerActive)} className={`${isFarmerActive ? 'text-red-600 hover:text-red-800' : 'text-green-600 hover:text-green-800'} font-semibold text-[11px] cursor-pointer`}>
+                              {isFarmerActive ? 'Deactivate' : 'Activate'}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
