@@ -6,15 +6,15 @@ import {
   type ConfirmationResult,
 } from 'firebase/auth';
 
-// Firebase configuration
+// Firebase configuration loaded from environment variables (.env)
 const firebaseConfig = {
-  apiKey: "AIzaSyBIwQbfZ52QH0wHoWc9tTQwbjaE8IblH1c",
-  authDomain: "smart-dairy-bd188.firebaseapp.com",
-  projectId: "smart-dairy-bd188",
-  storageBucket: "smart-dairy-bd188.firebasestorage.app",
-  messagingSenderId: "121688421653",
-  appId: "1:121688421653:web:eb7c5f7c3e7b38c854e51c",
-  measurementId: "G-6FCLBWL07Y"
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID,
 };
 
 // Prevent re-initialization
