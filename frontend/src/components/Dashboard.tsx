@@ -774,6 +774,7 @@ export default function Dashboard() {
       if (success) {
         setMilkErrorMsg('');
         setMilkSuccessMsg(`Entry saved for ${foundFarmer.name}! Rate: ₹${liveCalc.rate}/L, Total: ₹${liveCalc.totalAmount}`);
+        setSelectedFarmerCode('');
         setMilkQty(''); setMilkFat(''); setMilkSnf('');
         fetchDashboard();
       } else {
