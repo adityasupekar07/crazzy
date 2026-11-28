@@ -159,3 +159,111 @@ export interface BillingPreviewResponse {
   };
 }
 
+export type SettlementStatus = 'FINALIZED' | 'CANCELLED';
+
+export interface SettlementListParams {
+  startDate?: string;
+  endDate?: string;
+  farmerId?: string;
+  status?: SettlementStatus;
+  settlementReference?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface SettlementListItem {
+  id: string;
+  settlementNumber: string;
+  farmer: {
+    id: string;
+    code: number;
+    name: string;
+  };
+  billingPeriod: {
+    startDate: string;
+    endDate: string;
+  };
+  milkAmount: string;
+  totalDeductions: string;
+  netPayable: string;
+  status: SettlementStatus;
+  finalizedAt: string;
+}
+
+export interface PaginatedSettlementList {
+  data: SettlementListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export interface SettlementDetailResponse {
+  settlementId: string;
+  settlementNumber: string;
+  status: SettlementStatus;
+  finalizedAt: string;
+  finalizedBy: string | null;
+  farmer: {
+    id: string;
+    code: number;
+    name: string;
+    mobile: string;
+  };
+  billingPeriod: {
+    startDate: string;
+    endDate: string;
+    cycleType: string;
+  };
+  milkCollections: Array<{
+    id: string;
+    milkEntryId: string;
+    date: string;
+    shift: string;
+    milkType: string;
+    litres: string;
+    fat: string;
+    snf: string;
+    rate: string;
+    amount: string;
+  }>;
+  feedAllocations: Array<{
+    id: string;
+    foodSaleId: string;
+    foodName: string;
+    saleDate: string;
+    originalAmount: string;
+    previousPayments: string;
+    previousPending: string;
+    deductedAmount: string;
+    remainingAmount: string;
+  }>;
+  advanceAllocations: Array<{
+    id: string;
+    advanceId: string;
+    advanceNumber: string;
+    givenDate: string;
+    originalAmount: string;
+    externalRepayments: string;
+    previousPending: string;
+    deductedAmount: string;
+    remainingAmount: string;
+  }>;
+  summary: {
+    totalLitres: string;
+    grossMilkAmount: string;
+    previousFeedOutstanding: string;
+    currentFeedSales: string;
+    totalFeedOutstanding: string;
+    feedDeducted: string;
+    remainingFeed: string;
+    totalAdvanceOutstanding: string;
+    advanceDeducted: string;
+    remainingAdvance: string;
+    totalDeductions: string;
+    netPayable: string;
+  };
+}
+

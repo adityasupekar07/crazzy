@@ -13,6 +13,8 @@ import {
   getFarmerHistory,
   previewSettlement,
   finalizeSettlement,
+  listSettlements,
+  getSettlementDetail,
   createSettlement,
   getBillingHistory,
 } from '../controllers/billing.controller.js';
@@ -37,6 +39,9 @@ router.post(
   validate({ body: finalizeSettlementRequestSchema }),
   finalizeSettlement
 );
+
+router.get('/settlements', authMiddleware, listSettlements);
+router.get('/settlements/:settlementId', authMiddleware, getSettlementDetail);
 
 router.post(
   '/settle',

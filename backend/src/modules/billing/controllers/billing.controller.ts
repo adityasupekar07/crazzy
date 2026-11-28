@@ -3,6 +3,7 @@ import ApiResponse from '../../../utils/ApiResponse.js';
 import { BillingCycleService } from '../services/billing-cycle.service.js';
 import { BillingPreviewService } from '../services/billing-preview.service.js';
 import { SettlementService } from '../services/settlement.service.js';
+import { SettlementHistoryService } from '../services/settlement-history.service.js';
 import { FarmerSelectorService } from '../services/farmer-selector.service.js';
 import { FarmerHistoryService } from '../services/farmer-history.service.js';
 import {
@@ -11,6 +12,8 @@ import {
   farmerHistoryParamsSchema,
   farmerHistoryQuerySchema,
   finalizeSettlementRequestSchema,
+  settlementListQuerySchema,
+  settlementDetailParamsSchema,
 } from '../validators/billing.schema.js';
 
 export const getBillingFarmers = asyncHandler(async (req, res) => {
@@ -66,6 +69,22 @@ export const finalizeSettlement = asyncHandler(async (req, res) => {
   );
   return res.status(201).json(
     new ApiResponse(201, 'Billing settlement finalized successfully', result)
+  );
+});
+
+export const listSettlements = asyncHandler(async (req, res) => {
+  const validated = settlementListQuerySchema.parse(req.query);
+  const result = await SettlementHistoryService.listSettlements(req.user.id, validated);
+  return res.status(200).json(
+    new ApiResponse(200, 'Settlements fetched successfully', result)
+  );
+});
+
+export const getSettlementDetail = asyncHandler(async (req, res) => {
+  const { settlementId } = settlementDetailParamsSchema.parse(req.params);
+  const result = await SettlementHistoryService.getSettlementDetail(req.user.id, settlementId);
+  return res.status(200).json(
+    new ApiResponse(200, 'Settlement details fetched successfully', result)
   );
 });
 

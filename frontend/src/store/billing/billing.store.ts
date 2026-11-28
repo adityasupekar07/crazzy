@@ -13,6 +13,15 @@ const initialState = {
   historyError: null,
   previewError: null,
   error: null,
+  settlementList: [],
+  settlementPagination: null,
+  settlementFilters: { page: 1, limit: 20 },
+  selectedSettlementId: null,
+  settlementDetail: null,
+  isSettlementListLoading: false,
+  isSettlementDetailLoading: false,
+  settlementListError: null,
+  settlementDetailError: null,
 };
 
 export const useBillingSettlementStore = create<BillingSettlementState>((set, get) => ({
@@ -128,6 +137,70 @@ export const useBillingSettlementStore = create<BillingSettlementState>((set, ge
   },
 
   clearPreview: () => set({ billPreview: null, previewError: null }),
+
+  setSettlementFilters: (filters) => {
+    const next = { ...get().settlementFilters, ...filters };
+    set({ settlementFilters: next });
+  },
+
+  fetchSettlements: async (overrideFilters) => {
+    const params = overrideFilters ?? get().settlementFilters;
+    set({
+      isSettlementListLoading: true,
+      settlementListError: null,
+      settlementFilters: params,
+    });
+    try {
+      const res = await billingApi.getSettlements(params);
+      set({
+        settlementList: res.data,
+        settlementPagination: res.pagination,
+        isSettlementListLoading: false,
+        settlementListError: null,
+      });
+    } catch (err: any) {
+      set({
+        isSettlementListLoading: false,
+        settlementListError: err?.message || 'Failed to load settlements',
+      });
+    }
+  },
+
+  selectSettlement: (settlementId) => {
+    set({
+      selectedSettlementId: settlementId,
+      settlementDetail: null,
+      settlementDetailError: null,
+    });
+  },
+
+  fetchSettlementDetail: async (settlementId) => {
+    set({
+      selectedSettlementId: settlementId,
+      isSettlementDetailLoading: true,
+      settlementDetailError: null,
+    });
+    try {
+      const detail = await billingApi.getSettlementDetails(settlementId);
+      set({
+        settlementDetail: detail,
+        isSettlementDetailLoading: false,
+        settlementDetailError: null,
+      });
+    } catch (err: any) {
+      set({
+        isSettlementDetailLoading: false,
+        settlementDetailError: err?.message || 'Failed to load settlement details',
+      });
+    }
+  },
+
+  clearSelectedSettlement: () =>
+    set({
+      selectedSettlementId: null,
+      settlementDetail: null,
+      settlementDetailError: null,
+    }),
 
   reset: () => set({ ...initialState }),
 }));

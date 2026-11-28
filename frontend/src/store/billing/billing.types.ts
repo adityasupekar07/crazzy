@@ -2,7 +2,11 @@ import type {
   BillingFarmerItem,
   BillingPreviewResponse,
   FarmerHistoryResponse,
+  PaginatedSettlementList,
   ResolvedCycleRange,
+  SettlementDetailResponse,
+  SettlementListItem,
+  SettlementListParams,
 } from '../../modules/billing/billing.types';
 
 export type BillingCycle = ResolvedCycleRange;
@@ -25,11 +29,29 @@ export interface BillingSettlementState {
   previewError: string | null;
   error: string | null;
 
+  // Phase 11: Settlement History & Detail
+  settlementList: SettlementListItem[];
+  settlementPagination: PaginatedSettlementList['pagination'] | null;
+  settlementFilters: SettlementListParams;
+  selectedSettlementId: string | null;
+  settlementDetail: SettlementDetailResponse | null;
+  isSettlementListLoading: boolean;
+  isSettlementDetailLoading: boolean;
+  settlementListError: string | null;
+  settlementDetailError: string | null;
+
   setSelectedCycle: (cycle: BillingCycle | null) => void;
   setSelectedFarmer: (farmer: Farmer | null) => void;
   fetchFarmerHistory: () => Promise<void>;
   calculateBillPreview: () => Promise<void>;
   clearPreview: () => void;
+
+  setSettlementFilters: (filters: Partial<SettlementListParams>) => void;
+  fetchSettlements: (overrideFilters?: SettlementListParams) => Promise<void>;
+  selectSettlement: (settlementId: string | null) => void;
+  fetchSettlementDetail: (settlementId: string) => Promise<void>;
+  clearSelectedSettlement: () => void;
+
   reset: () => void;
 }
 

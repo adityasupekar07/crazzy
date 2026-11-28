@@ -41,6 +41,10 @@ export const QUERY_KEYS = {
     farmerHistory: (farmerId: string, startDate: string, endDate: string) =>
       ['billing', 'farmerHistory', farmerId, startDate, endDate] as const,
     settlements: (customerId?: string) => ['billing', 'settlements', customerId ?? 'all'] as const,
+    settlementsList: (params?: Record<string, unknown>) =>
+      ['billing', 'settlementsList', params ?? {}] as const,
+    settlementDetail: (settlementId: string) =>
+      ['billing', 'settlementDetail', settlementId] as const,
   },
   dashboard: {
     stats: () => ['dashboard', 'stats'] as const,

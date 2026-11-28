@@ -24,7 +24,21 @@ export const finalizeSettlementRequestSchema = z.object({
     .string()
     .trim()
     .min(1, 'Idempotency key is required')
-    .max(200, 'Idempotency key must be at most 200 characters'),
+    .max(200, 'Idempotency key key must be at most 200 characters'),
+});
+
+export const settlementListQuerySchema = z.object({
+  startDate: z.string().trim().optional(),
+  endDate: z.string().trim().optional(),
+  farmerId: z.string().trim().optional(),
+  status: z.enum(['FINALIZED', 'CANCELLED']).optional(),
+  settlementReference: z.string().trim().max(100).optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+export const settlementDetailParamsSchema = z.object({
+  settlementId: z.string().trim().min(1, 'Settlement ID is required'),
 });
 
 export const createSettlementSchema = z.object({
