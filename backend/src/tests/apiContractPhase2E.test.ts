@@ -10,8 +10,6 @@ import {
 } from "../modules/rateChart/chart.schema.js";
 import {
   addMilkEntrySchema,
-  correctMilkEntrySchema,
-  reverseMilkEntrySchema,
 } from "../modules/milkEntry/milkEntry.schema.js";
 import { RateCalculationService } from "../modules/rateChart/services/rateCalculation.service.js";
 import { CachedActiveChart } from "../modules/rateChart/types/rateCalculation.types.js";
@@ -339,110 +337,7 @@ async function runPhase2EIntegrationTests() {
   const duplicateAttempt = canAddEntry({ customerId: "cust-101", date: "2026-01-20", shift: "MORNING" });
   assert(!duplicateAttempt, "Duplicate collection on same date and shift is strictly rejected");
 
-  console.log("\n--- 6. AUDITED CORRECTION & REVERSAL WORKFLOWS ---");
-
-  // Test 13: Correction without reason is rejected
-  const parsedBadCorrection = correctMilkEntrySchema.safeParse({
-    quantity: 16.0,
-    fat: 4.5,
-    // reason omitted
-  });
-  assert(!parsedBadCorrection.success, "Correction without reason is rejected with validation error");
-
-  // Test 14: Correction reason shorter than 3 characters is rejected
-  const parsedShortReason = correctMilkEntrySchema.safeParse({
-    quantity: 16.0,
-    reason: "ok", // only 2 chars
-  });
-  assert(!parsedShortReason.success, "Correction reason shorter than 3 characters is rejected");
-
-  // Test 15: Valid correction recalculates using the ORIGINAL historical chart
-  const correctionPayload = {
-    quantity: 16.0,
-    fat: 4.0, // FAT corrected from 4.2 to 4.0
-    snf: 8.5, // SNF corrected from 8.7 to 8.5
-    reason: "Sample re-tested in laboratory, updated quality values",
-  };
-  const parsedValidCorrection = correctMilkEntrySchema.safeParse(correctionPayload);
-  assert(parsedValidCorrection.success, "Valid correction payload passes schema validation");
-
-  const correctedFat = RateCalculationService.truncateQualityStep(new Decimal(correctionPayload.fat));
-  const correctedSnf = RateCalculationService.truncateQualityStep(new Decimal(correctionPayload.snf));
-  const correctedCalc = await RateCalculationService.executeCalculationForChart(
-    mockCowChartJan, // original Jan chart!
-    new Decimal(correctionPayload.quantity),
-    correctedFat,
-    correctedSnf,
-    MilkType.COW
-  );
-  // Jan chart: Base 35.00 + FAT (4.0 - 3.5 = +0.5 / 0.1 * 0.40 = +2.00) + SNF (8.5 - 8.5 = 0.00) = 37.00
-  // Total: 16.0 * 37.00 = 592.00
-  assert(
-    correctedCalc.rate === "37.00" && correctedCalc.totalAmount === "592.00",
-    "Correction recalculates using original historical chart (₹37.00/L vs Feb ₹40.50/L)"
-  );
-
-  // Apply correction
-  entryJan.quantity = new Decimal(correctionPayload.quantity);
-  entryJan.fat = new Decimal(correctionPayload.fat);
-  entryJan.snf = new Decimal(correctionPayload.snf);
-  entryJan.rate = new Decimal(correctedCalc.rate);
-  entryJan.totalAmount = new Decimal(correctedCalc.totalAmount);
-  entryJan.isCorrected = true;
-  entryJan.correctionReason = correctionPayload.reason;
-
-  auditLogs.push({
-    id: "audit-001",
-    milkEntryId: entryJan.id,
-    action: "CORRECTED",
-    reason: correctionPayload.reason,
-    originalValues: { fat: 4.2, snf: 8.7, rate: 38.30, totalAmount: 593.65 },
-    newValues: { fat: 4.0, snf: 8.5, rate: 37.00, totalAmount: 592.00 },
-    timestamp: new Date(),
-  });
-
-  assert(
-    entryJan.isCorrected && auditLogs.length === 1,
-    "Correction preserves original values in immutable audit log and marks record as corrected"
-  );
-
-  // Test 16: Reversal without reason is rejected
-  const parsedBadReversal = reverseMilkEntrySchema.safeParse({});
-  assert(!parsedBadReversal.success, "Reversal without reason is rejected with validation error");
-
-  // Test 17: Valid reversal marks entry as reversed and records audit log
-  const reversalReason = "Customer milk batch contaminated; collection cancelled";
-  const parsedValidReversal = reverseMilkEntrySchema.safeParse({ reason: reversalReason });
-  assert(parsedValidReversal.success, "Valid reversal reason passes schema validation");
-
   entryJan.isReversed = true;
-  entryJan.reversalReason = reversalReason;
-
-  auditLogs.push({
-    id: "audit-002",
-    milkEntryId: entryJan.id,
-    action: "REVERSED",
-    reason: reversalReason,
-    originalValues: { isReversed: false },
-    newValues: { isReversed: true },
-    timestamp: new Date(),
-  });
-
-  assert(
-    entryJan.isReversed && entryJan.reversalReason === reversalReason,
-    "Reversal marks entry as reversed and records reversal reason"
-  );
-
-  // Test 18: Reversed entry cannot be corrected again
-  let reversalBlockPassed = false;
-  try {
-    if (entryJan.isReversed) {
-      throw new ApiError(400, "Cannot correct a reversed milk collection record");
-    }
-  } catch (err: any) {
-    reversalBlockPassed = err.statusCode === 400;
-  }
-  assert(reversalBlockPassed, "Reversed entry is permanently locked against further corrections");
 
   // Test 19: Reversed entries are strictly excluded from financial summaries and billing settlements
   const entryFeb: MockMilkEntry = {

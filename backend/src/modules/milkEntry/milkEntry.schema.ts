@@ -33,25 +33,3 @@ export const updateMilkEntrySchema = z.object({
   totalAmount: z.number().optional(),
   reason: z.string().min(3, "Correction reason must be at least 3 characters").optional(),
 });
-
-/**
- * =====================================================
- * EXPLICIT HISTORICAL CORRECTION
- * =====================================================
- */
-export const correctMilkEntrySchema = z.object({
-  quantity: z.number().positive().optional(),
-  fat: z.number().positive().optional(),
-  snf: z.number().positive().optional(),
-  milkType: z.enum(["COW", "BUFFALO", "MIX"]).optional(),
-  reason: z.string().min(3, "Correction reason must be at least 3 characters"),
-});
-
-/**
- * =====================================================
- * COLLECTION REVERSAL
- * =====================================================
- */
-export const reverseMilkEntrySchema = z.object({
-  reason: z.string().min(3, "Reversal reason must be at least 3 characters"),
-});

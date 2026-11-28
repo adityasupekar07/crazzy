@@ -4,8 +4,6 @@ import { QUERY_KEYS } from './keys';
 import type { 
   MilkEntry, 
   CreateMilkEntryInput, 
-  CorrectMilkEntryInput, 
-  ReverseMilkEntryInput 
 } from '../store/collection/useMilkCollectionStore';
 import { 
   useMilkCollectionStore, 
@@ -92,26 +90,6 @@ export function useMilkMutations() {
     },
   });
 
-  const correctEntry = useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: CorrectMilkEntryInput }) => {
-      return await request(`/milk/${id}/correct`, 'POST', payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.milk.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.stats() });
-    },
-  });
-
-  const reverseEntry = useMutation({
-    mutationFn: async ({ id, payload }: { id: string; payload: ReverseMilkEntryInput }) => {
-      return await request(`/milk/${id}/reverse`, 'POST', payload);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.milk.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.stats() });
-    },
-  });
-
   const deleteEntry = useMutation({
     mutationFn: async (id: string) => {
       return await request(`/milk/${id}`, 'DELETE');
@@ -125,8 +103,6 @@ export function useMilkMutations() {
   return {
     createEntry,
     updateEntry,
-    correctEntry,
-    reverseEntry,
     deleteEntry,
   };
 }

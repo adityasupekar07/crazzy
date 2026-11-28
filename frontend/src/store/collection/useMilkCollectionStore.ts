@@ -54,18 +54,6 @@ export interface CreateMilkEntryInput {
   totalAmount?: number;
 }
 
-export interface CorrectMilkEntryInput {
-  quantity?: number;
-  fat?: number;
-  snf?: number;
-  milkType?: 'COW' | 'BUFFALO' | 'MIX';
-  reason: string;
-}
-
-export interface ReverseMilkEntryInput {
-  reason: string;
-}
-
 export interface MilkCollectionState {
   // Data
   collections: MilkEntry[];
@@ -81,8 +69,6 @@ export interface MilkCollectionState {
   createCollectionEntry: (entry: CreateMilkEntryInput) => Promise<boolean>;
   addCollectionEntry: (entry: CreateMilkEntryInput) => Promise<boolean>; // Alias
   updateCollectionEntry: (id: string, entry: Partial<CreateMilkEntryInput>) => Promise<boolean>;
-  correctCollectionEntry: (id: string, payload: CorrectMilkEntryInput) => Promise<boolean>;
-  reverseCollectionEntry: (id: string, payload: ReverseMilkEntryInput) => Promise<boolean>;
   deleteCollectionEntry: (id: string) => Promise<boolean>;
   reset: () => void;
 }
@@ -225,48 +211,6 @@ export const useMilkCollectionStore = create<MilkCollectionState>((set, get) => 
       return true;
     } catch (err: any) {
       set({ error: err.message || 'Failed to update milk entry', status: 'error' });
-      return false;
-    }
-  },
-
-  // ── AUDITED CORRECTION ─────────────────────────────────────────────────────
-  correctCollectionEntry: async (id, payload) => {
-    set({ status: 'loading', error: null });
-    try {
-      const res: any = await request(`/milk/${id}/correct`, 'POST', payload);
-      const updatedEntry = mapRawMilkEntry(res);
-
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.milk.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.stats() });
-      set({ 
-        collections: get().collections.map(c => c.id === id ? updatedEntry : c),
-        history: get().history.map(c => c.id === id ? updatedEntry : c),
-        status: 'success' 
-      });
-      return true;
-    } catch (err: any) {
-      set({ error: err.message || 'Failed to correct milk entry', status: 'error' });
-      return false;
-    }
-  },
-
-  // ── AUDITED REVERSAL ───────────────────────────────────────────────────────
-  reverseCollectionEntry: async (id, payload) => {
-    set({ status: 'loading', error: null });
-    try {
-      const res: any = await request(`/milk/${id}/reverse`, 'POST', payload);
-      const updatedEntry = mapRawMilkEntry(res);
-
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.milk.all });
-      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.dashboard.stats() });
-      set({ 
-        collections: get().collections.map(c => c.id === id ? updatedEntry : c),
-        history: get().history.map(c => c.id === id ? updatedEntry : c),
-        status: 'success' 
-      });
-      return true;
-    } catch (err: any) {
-      set({ error: err.message || 'Failed to reverse milk entry', status: 'error' });
       return false;
     }
   },

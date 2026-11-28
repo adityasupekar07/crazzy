@@ -125,40 +125,6 @@ export const updateMilkEntry =
 
 /**
  * =====================================================
- * CORRECT ENTRY (Explicit Phase 2D Audited Endpoint)
- * =====================================================
- */
-export const correctMilkEntry = asyncHandler(async (req, res) => {
-  const id = String(req.params.id);
-  const result = await milkEntryService.correctMilkEntry(
-    req.user.id,
-    id,
-    req.body
-  );
-  return res.status(200).json(
-    new ApiResponse(200, "Milk entry corrected successfully", result)
-  );
-});
-
-/**
- * =====================================================
- * REVERSE ENTRY (Explicit Phase 2D Audited Endpoint)
- * =====================================================
- */
-export const reverseMilkEntry = asyncHandler(async (req, res) => {
-  const id = String(req.params.id);
-  const result = await milkEntryService.reverseMilkEntry(
-    req.user.id,
-    id,
-    req.body.reason
-  );
-  return res.status(200).json(
-    new ApiResponse(200, "Milk entry reversed successfully", result)
-  );
-});
-
-/**
- * =====================================================
  * DELETE ENTRY
  * =====================================================
  */

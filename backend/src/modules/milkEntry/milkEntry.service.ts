@@ -1060,9 +1060,5 @@ export const milkEntryService = {
 
   updateMilkEntry,
 
-  correctMilkEntry,
-
-  reverseMilkEntry,
-
   deleteMilkEntry,
 };

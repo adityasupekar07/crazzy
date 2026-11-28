@@ -18,8 +18,6 @@ import { Decimal } from 'decimal.js';
 import { RateChartModule } from '../modules/rateChart/RateChartModule';
 import { BillingSettlementScreen } from '../modules/billing/screens/BillingSettlementScreen';
 import { useLiveRateCalculator } from '../modules/rateChart/hooks/useLiveRateCalculator';
-import { CollectionCorrectionModal } from './CollectionCorrectionModal';
-import { CollectionReversalModal } from './CollectionReversalModal';
 import { CalculationSnapshotModal } from './CalculationSnapshotModal';
 import LanguageSelector from './LanguageSelector';
 import TableSkeleton from './TableSkeleton';
@@ -186,8 +184,6 @@ export default function Dashboard() {
 
   // Rate Chart & Historical Collection Modals
   const [snapshotEntry, setSnapshotEntry] = useState<MilkEntry | null>(null);
-  const [correctionEntry, setCorrectionEntry] = useState<MilkEntry | null>(null);
-  const [reversalEntry, setReversalEntry] = useState<MilkEntry | null>(null);
 
   // Receipt Modal State
   const [receiptModalOpen, setReceiptModalOpen] = useState(false);
@@ -1533,22 +1529,6 @@ export default function Dashboard() {
                           >
                             <Printer className="w-3.5 h-3.5 inline" />
                           </button>
-                          <button
-                            onClick={() => setCorrectionEntry(c)}
-                            disabled={c.isReversed}
-                            title="Audited Correction"
-                            className="p-1 text-amber-600 hover:text-amber-800 hover:bg-amber-50 disabled:opacity-30 rounded transition cursor-pointer font-bold text-[10px]"
-                          >
-                            CORRECT
-                          </button>
-                          <button
-                            onClick={() => setReversalEntry(c)}
-                            disabled={c.isReversed}
-                            title="Audited Reversal"
-                            className="p-1 text-red-500 hover:text-red-700 hover:bg-red-50 disabled:opacity-30 rounded transition cursor-pointer font-bold text-[10px]"
-                          >
-                            REVERSE
-                          </button>
                         </td>
                       </tr>
                     ))}
@@ -2790,24 +2770,6 @@ export default function Dashboard() {
         isOpen={Boolean(snapshotEntry)}
         entry={snapshotEntry}
         onClose={() => setSnapshotEntry(null)}
-      />
-      <CollectionCorrectionModal
-        isOpen={Boolean(correctionEntry)}
-        entry={correctionEntry}
-        onClose={() => setCorrectionEntry(null)}
-        onSuccess={() => {
-          fetchCollections();
-          fetchDashboard();
-        }}
-      />
-      <CollectionReversalModal
-        isOpen={Boolean(reversalEntry)}
-        entry={reversalEntry}
-        onClose={() => setReversalEntry(null)}
-        onSuccess={() => {
-          fetchCollections();
-          fetchDashboard();
-        }}
       />
 
     </div>
