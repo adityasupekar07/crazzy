@@ -157,6 +157,7 @@ export const useAdvanceStore = create<AdvanceState>((set, get) => ({
       await request<Advance>('/advance', 'POST', data);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.advances.all });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.farmers.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.billing.all });
       await get().fetchAdvances();
       set({ status: 'success' });
       return true;
@@ -174,6 +175,7 @@ export const useAdvanceStore = create<AdvanceState>((set, get) => ({
       await request<Advance>(`/advance/${advanceId}/repayments`, 'POST', data);
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.advances.all });
       queryClient.invalidateQueries({ queryKey: QUERY_KEYS.farmers.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.billing.all });
       await get().fetchAdvances();
       set({ status: 'success' });
       return true;

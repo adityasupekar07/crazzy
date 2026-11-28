@@ -63,24 +63,63 @@ export const addCustomer = async (data: any) => {
  */
 
 export const getCustomers = async (adminId: string) => {
-  return prisma.customer.findMany({
-    where: {
-      adminId,
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
+  const [customers, advanceAggs] = await Promise.all([
+    prisma.customer.findMany({
+      where: {
+        adminId,
+      },
+      orderBy: {
+        createdAt: "desc",
+      },
+    }),
+    prisma.advance.groupBy({
+      by: ["customerId"],
+      where: {
+        adminId,
+        status: { in: ["ACTIVE", "PARTIALLY_RECOVERED"] },
+        pendingAmount: { gt: 0 },
+      },
+      _sum: {
+        pendingAmount: true,
+      },
+    }),
+  ]);
+
+  const advanceMap = new Map<string, number>();
+  for (const row of advanceAggs) {
+    advanceMap.set(row.customerId, Number(row._sum.pendingAmount ?? 0));
+  }
+
+  return customers.map((customer) => ({
+    ...customer,
+    advanceBalance: advanceMap.get(customer.id) ?? 0,
+  }));
 };
 
 export const getCustomerById = async (id: string, adminId: string) => {
-  const customer = await prisma.customer.findFirst({
-    where: { id, adminId }
-  });
+  const [customer, advanceAgg] = await Promise.all([
+    prisma.customer.findFirst({
+      where: { id, adminId },
+    }),
+    prisma.advance.aggregate({
+      where: {
+        adminId,
+        customerId: id,
+        status: { in: ["ACTIVE", "PARTIALLY_RECOVERED"] },
+        pendingAmount: { gt: 0 },
+      },
+      _sum: {
+        pendingAmount: true,
+      },
+    }),
+  ]);
   if (!customer) {
     throw new ApiError(404, "Customer not found");
   }
-  return customer;
+  return {
+    ...customer,
+    advanceBalance: Number(advanceAgg._sum.pendingAmount ?? 0),
+  };
 };
 
 export const updateCustomer = async (id: string, data: any, adminId: string) => {
