@@ -1,6 +1,7 @@
 import prisma from '../../../db/index.js';
 import { getIstStartOfDay, getIstEndOfDay, formatIstDate } from '../../rateChart/utils/dateUtils.js';
 import { Decimal, ROUND_HALF_UP } from '../../../utils/decimal.js';
+import { ReconciliationService } from '../services/reconciliation.service.js';
 import { FarmerHistoryFeedItem, PendingFeedSaleItem } from '../types/billing.types.js';
 
 export class FeedRepository {
@@ -27,24 +28,30 @@ export class FeedRepository {
       },
       include: {
         settlementAllocations: {
-          where: {
-            settlement: { status: 'FINALIZED' },
-          },
           select: {
+            settlementId: true,
             allocatedAmount: true,
+            settlement: {
+              select: { status: true },
+            },
           },
         },
       },
       orderBy: [{ saleDate: 'asc' }, { createdAt: 'asc' }],
     });
 
+    ReconciliationService.reconcileFeedSales(rows);
+
     return rows.map((row) => {
       const originalDec = new Decimal(row.totalAmount.toString()).toDecimalPlaces(2, ROUND_HALF_UP);
       const pendingDec = new Decimal(row.pendingAmount.toString()).toDecimalPlaces(2, ROUND_HALF_UP);
-      const settlementDeductedDec = row.settlementAllocations.reduce(
-        (sum, alloc) => sum.plus(new Decimal(alloc.allocatedAmount.toString())),
-        new Decimal(0)
-      ).toDecimalPlaces(2, ROUND_HALF_UP);
+      const settlementDeductedDec = row.settlementAllocations
+        .filter((alloc) => alloc.settlement?.status === 'FINALIZED')
+        .reduce(
+          (sum, alloc) => sum.plus(new Decimal(alloc.allocatedAmount.toString())),
+          new Decimal(0)
+        )
+        .toDecimalPlaces(2, ROUND_HALF_UP);
 
       // pendingAmount already reflects both upfront amountPaid and finalized settlement deductions
       const totalSettledOrPaid = Decimal.max(0, originalDec.minus(pendingDec));

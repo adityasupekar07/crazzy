@@ -1,6 +1,7 @@
 import prisma from '../../../db/index.js';
 import { formatIstDate } from '../../rateChart/utils/dateUtils.js';
 import { Decimal, ROUND_HALF_UP } from '../../../utils/decimal.js';
+import { ReconciliationService } from '../services/reconciliation.service.js';
 import { FarmerHistoryAdvanceItem, PendingAdvanceItem } from '../types/billing.types.js';
 
 export class AdvanceRepository {
@@ -21,6 +22,15 @@ export class AdvanceRepository {
         customerId,
       },
       include: {
+        settlementAllocations: {
+          select: {
+            settlementId: true,
+            allocatedAmount: true,
+            settlement: {
+              select: { status: true },
+            },
+          },
+        },
         transactions: {
           include: {
             settlement: {
@@ -35,6 +45,8 @@ export class AdvanceRepository {
       },
       orderBy: [{ givenDate: 'asc' }, { createdAt: 'asc' }],
     });
+
+    ReconciliationService.reconcileAdvances(advances);
 
     const items: FarmerHistoryAdvanceItem[] = [];
     let totalGivenDec = new Decimal(0);

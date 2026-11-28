@@ -9,6 +9,7 @@ import { BillingRepository } from '../repositories/billing.repository.js';
 import { AdvanceRepository } from '../repositories/advance.repository.js';
 import { FeedRepository } from '../repositories/feed.repository.js';
 import { BillingCycleService } from './billing-cycle.service.js';
+import { ReconciliationService } from './reconciliation.service.js';
 import {
   BillingCalculationService,
   calculateBillingSettlement,
@@ -300,6 +301,15 @@ export class SettlementService {
             pendingAmount: { gt: 0 },
             saleDate: { lte: cycleEndDate },
           },
+          include: {
+            settlementAllocations: {
+              select: {
+                settlementId: true,
+                allocatedAmount: true,
+                settlement: { select: { status: true } },
+              },
+            },
+          },
           orderBy: [{ saleDate: 'asc' }, { createdAt: 'asc' }],
         });
 
@@ -309,6 +319,13 @@ export class SettlementService {
             customerId: dto.farmerId,
           },
           include: {
+            settlementAllocations: {
+              select: {
+                settlementId: true,
+                allocatedAmount: true,
+                settlement: { select: { status: true } },
+              },
+            },
             transactions: {
               include: {
                 settlement: { select: { status: true } },
@@ -318,6 +335,9 @@ export class SettlementService {
           },
           orderBy: [{ givenDate: 'asc' }, { createdAt: 'asc' }],
         });
+
+        ReconciliationService.reconcileFeedSales(feedSales);
+        ReconciliationService.reconcileAdvances(advances);
 
         // Reconstruct deterministic fingerprint matching BillingPreviewService
         const advanceItemsForFingerprint: Array<{
