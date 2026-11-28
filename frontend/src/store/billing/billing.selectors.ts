@@ -21,10 +21,12 @@ export const selectCanCalculatePreview = (state: BillingSettlementState): boolea
   );
 };
 
-/**
- * Phase 8: Finalize Settlement remains disabled until Phase 9 integration.
- */
-export const selectCanFinalizeSettlement = (_state: BillingSettlementState): boolean => {
-  return false;
+export const selectCanFinalizeSettlement = (state: BillingSettlementState): boolean => {
+  return (
+    Boolean(state.billPreview) &&
+    selectIsHistoryValid(state) &&
+    !state.isPreviewLoading &&
+    !state.isFinalizing
+  );
 };
 

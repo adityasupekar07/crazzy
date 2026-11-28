@@ -1,5 +1,7 @@
 import { create } from 'zustand';
 import { billingApi } from '../../modules/billing/billing.api';
+import { queryClient } from '../../lib/queryClient';
+import { QUERY_KEYS } from '../../queries/keys';
 import type { BillingSettlementState } from './billing.types';
 
 const initialState = {
@@ -12,6 +14,8 @@ const initialState = {
   isFinalizing: false,
   historyError: null,
   previewError: null,
+  finalizeError: null,
+  finalizedSettlement: null,
   error: null,
   settlementList: [],
   settlementPagination: null,
@@ -42,6 +46,8 @@ export const useBillingSettlementStore = create<BillingSettlementState>((set, ge
       billPreview: null,
       historyError: null,
       previewError: null,
+      finalizeError: null,
+      finalizedSettlement: null,
       error: null,
     });
   },
@@ -56,6 +62,8 @@ export const useBillingSettlementStore = create<BillingSettlementState>((set, ge
       billPreview: null,
       historyError: null,
       previewError: null,
+      finalizeError: null,
+      finalizedSettlement: null,
       error: null,
     });
   },
@@ -136,7 +144,54 @@ export const useBillingSettlementStore = create<BillingSettlementState>((set, ge
     }
   },
 
-  clearPreview: () => set({ billPreview: null, previewError: null }),
+  clearPreview: () => set({ billPreview: null, previewError: null, finalizeError: null }),
+
+  clearFinalizedSettlement: () => set({ finalizedSettlement: null }),
+
+  finalizeSettlement: async () => {
+    const { billPreview, isFinalizing, isPreviewLoading } = get();
+    if (!billPreview || isFinalizing || isPreviewLoading) return null;
+
+    set({
+      isFinalizing: true,
+      finalizeError: null,
+      error: null,
+    });
+
+    try {
+      const idempotencyKey = `settle-${billPreview.previewId}`;
+      const result = await billingApi.finalizeSettlement({
+        previewId: billPreview.previewId,
+        farmerId: billPreview.farmer.id,
+        startDate: billPreview.billingPeriod.startDate,
+        endDate: billPreview.billingPeriod.endDate,
+        idempotencyKey,
+      });
+
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.billing.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.farmers.all });
+      queryClient.invalidateQueries({ queryKey: QUERY_KEYS.advances.all });
+
+      set({
+        isFinalizing: false,
+        finalizedSettlement: result,
+        billPreview: null,
+        farmerHistory: null,
+        finalizeError: null,
+        error: null,
+      });
+
+      return result;
+    } catch (err: any) {
+      const message = err?.message || 'Failed to finalize settlement';
+      set({
+        isFinalizing: false,
+        finalizeError: message,
+        error: message,
+      });
+      return null;
+    }
+  },
 
   setSettlementFilters: (filters) => {
     const next = { ...get().settlementFilters, ...filters };

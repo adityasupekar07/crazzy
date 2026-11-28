@@ -1,13 +1,23 @@
 import React from 'react';
-import { FileCheck2, Lock, ShieldCheck } from 'lucide-react';
+import { FileCheck2, CheckCircle2, ShieldCheck, Loader2, AlertTriangle } from 'lucide-react';
 import { SettlementSummary } from './SettlementSummary';
 import type { BillingPreviewResponse } from '../billing.types';
 
 interface BillPreviewProps {
   preview: BillingPreviewResponse;
+  canFinalize: boolean;
+  isFinalizing: boolean;
+  finalizeError: string | null;
+  onFinalize: () => void;
 }
 
-export const BillPreview: React.FC<BillPreviewProps> = ({ preview }) => {
+export const BillPreview: React.FC<BillPreviewProps> = ({
+  preview,
+  canFinalize,
+  isFinalizing,
+  finalizeError,
+  onFinalize,
+}) => {
   return (
     <div className="light-panel p-6 rounded-xl space-y-5 border-2 border-[#0052cc]/20">
       <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-gray-200">
@@ -37,22 +47,39 @@ export const BillPreview: React.FC<BillPreviewProps> = ({ preview }) => {
 
       <SettlementSummary preview={preview} />
 
+      {finalizeError && (
+        <div className="p-4 rounded-xl border border-rose-200 bg-rose-50/70 flex items-center gap-2.5 text-xs text-rose-700">
+          <AlertTriangle className="w-4 h-4 shrink-0" />
+          <div>
+            <strong>Finalization failed:</strong> {finalizeError}
+          </div>
+        </div>
+      )}
+
       <div className="pt-3 border-t border-gray-200 flex flex-wrap items-center justify-between gap-3">
         <p className="text-xs text-gray-500">
-          Preview is read-only. No milk, feed, or advance balances have been modified.
+          Preview is read-only until you click Finalize Settlement.
         </p>
 
         <button
           type="button"
-          disabled={true}
-          title="Settlement finalization will be enabled in the next phase"
-          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-bold bg-gray-200 text-gray-500 cursor-not-allowed border border-gray-300"
+          disabled={!canFinalize || isFinalizing}
+          onClick={onFinalize}
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-xl text-xs font-bold bg-[#0052cc] hover:bg-[#0747a6] disabled:bg-gray-300 disabled:text-gray-500 disabled:cursor-not-allowed text-white transition shadow-sm cursor-pointer"
         >
-          <Lock className="w-4 h-4" />
-          Finalize Settlement
+          {isFinalizing ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Finalizing Settlement...
+            </>
+          ) : (
+            <>
+              <CheckCircle2 className="w-4 h-4" />
+              Finalize Settlement
+            </>
+          )}
         </button>
       </div>
     </div>
   );
 };
-

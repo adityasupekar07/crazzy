@@ -159,6 +159,45 @@ export interface BillingPreviewResponse {
   };
 }
 
+export interface FinalizeSettlementRequest {
+  previewId: string;
+  farmerId: string;
+  startDate: string;
+  endDate: string;
+  idempotencyKey: string;
+}
+
+export interface FinalizeSettlementResponse {
+  settlementId: string;
+  settlementNumber: string;
+  status: SettlementStatus;
+  farmerId: string;
+  billingPeriod: {
+    startDate: string;
+    endDate: string;
+  };
+  milkSummary: {
+    totalLitres: string;
+    totalAmount: string;
+  };
+  feedSummary: {
+    totalOutstanding: string;
+    deducted: string;
+    remaining: string;
+  };
+  advanceSummary: {
+    totalOutstanding: string;
+    deducted: string;
+    remaining: string;
+  };
+  settlementSummary: {
+    grossAmount: string;
+    totalDeductions: string;
+    netPayable: string;
+  };
+  settledAt: string;
+}
+
 export type SettlementStatus = 'FINALIZED' | 'CANCELLED';
 
 export interface SettlementListParams {

@@ -2,6 +2,7 @@ import type {
   BillingFarmerItem,
   BillingPreviewResponse,
   FarmerHistoryResponse,
+  FinalizeSettlementResponse,
   PaginatedSettlementList,
   ResolvedCycleRange,
   SettlementDetailResponse,
@@ -27,6 +28,8 @@ export interface BillingSettlementState {
 
   historyError: string | null;
   previewError: string | null;
+  finalizeError: string | null;
+  finalizedSettlement: FinalizeSettlementResponse | null;
   error: string | null;
 
   // Phase 11: Settlement History & Detail
@@ -44,7 +47,9 @@ export interface BillingSettlementState {
   setSelectedFarmer: (farmer: Farmer | null) => void;
   fetchFarmerHistory: () => Promise<void>;
   calculateBillPreview: () => Promise<void>;
+  finalizeSettlement: () => Promise<FinalizeSettlementResponse | null>;
   clearPreview: () => void;
+  clearFinalizedSettlement: () => void;
 
   setSettlementFilters: (filters: Partial<SettlementListParams>) => void;
   fetchSettlements: (overrideFilters?: SettlementListParams) => Promise<void>;

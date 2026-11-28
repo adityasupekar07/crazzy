@@ -3,6 +3,8 @@ import type {
   BillingPreviewRequest,
   BillingPreviewResponse,
   FarmerHistoryResponse,
+  FinalizeSettlementRequest,
+  FinalizeSettlementResponse,
   PaginatedBillingFarmers,
   PaginatedSettlementList,
   PaymentCycleOption,
@@ -40,6 +42,12 @@ export const billingApi = {
 
   generatePreview: async (payload: BillingPreviewRequest): Promise<BillingPreviewResponse> => {
     return await request<BillingPreviewResponse>('/billing/preview', 'POST', payload);
+  },
+
+  finalizeSettlement: async (
+    payload: FinalizeSettlementRequest
+  ): Promise<FinalizeSettlementResponse> => {
+    return await request<FinalizeSettlementResponse>('/billing/settlements', 'POST', payload);
   },
 
   getSettlements: async (params: SettlementListParams = {}): Promise<PaginatedSettlementList> => {

@@ -1,9 +1,20 @@
 import React, { useState } from 'react';
-import { Calculator, History, Loader2, AlertTriangle, RotateCcw, ListChecks, PlusCircle } from 'lucide-react';
+import {
+  Calculator,
+  History,
+  Loader2,
+  AlertTriangle,
+  RotateCcw,
+  ListChecks,
+  PlusCircle,
+  CheckCircle2,
+  ArrowRight,
+} from 'lucide-react';
 import {
   useBillingSettlementStore,
   selectCanFetchHistory,
   selectCanCalculatePreview,
+  selectCanFinalizeSettlement,
   selectIsHistoryValid,
 } from '../../../store';
 import { BillingPeriodSelector } from '../components/BillingPeriodSelector';
@@ -20,17 +31,22 @@ export const BillingSettlementScreen: React.FC = () => {
   const billPreview = useBillingSettlementStore((s) => s.billPreview);
   const isHistoryLoading = useBillingSettlementStore((s) => s.isHistoryLoading);
   const isPreviewLoading = useBillingSettlementStore((s) => s.isPreviewLoading);
+  const isFinalizing = useBillingSettlementStore((s) => s.isFinalizing);
   const historyError = useBillingSettlementStore((s) => s.historyError);
   const previewError = useBillingSettlementStore((s) => s.previewError);
+  const finalizeError = useBillingSettlementStore((s) => s.finalizeError);
+  const finalizedSettlement = useBillingSettlementStore((s) => s.finalizedSettlement);
   const selectedSettlementId = useBillingSettlementStore((s) => s.selectedSettlementId);
 
   const fetchFarmerHistory = useBillingSettlementStore((s) => s.fetchFarmerHistory);
   const calculateBillPreview = useBillingSettlementStore((s) => s.calculateBillPreview);
+  const finalizeSettlement = useBillingSettlementStore((s) => s.finalizeSettlement);
   const selectSettlement = useBillingSettlementStore((s) => s.selectSettlement);
   const clearSelectedSettlement = useBillingSettlementStore((s) => s.clearSelectedSettlement);
 
   const canFetchHistory = useBillingSettlementStore(selectCanFetchHistory);
   const canCalculatePreview = useBillingSettlementStore(selectCanCalculatePreview);
+  const canFinalizeSettlement = useBillingSettlementStore(selectCanFinalizeSettlement);
   const isHistoryValid = useBillingSettlementStore(selectIsHistoryValid);
 
   return (
@@ -172,9 +188,44 @@ export const BillingSettlementScreen: React.FC = () => {
             </div>
           )}
 
-          {/* 8 & 9. Bill Preview + Deduction Breakdown + Disabled Finalize Settlement */}
+          {/* 8 & 9. Bill Preview + Deduction Breakdown + Finalize Settlement */}
           {billPreview && !isPreviewLoading && isHistoryValid && (
-            <BillPreview preview={billPreview} />
+            <BillPreview
+              preview={billPreview}
+              canFinalize={canFinalizeSettlement}
+              isFinalizing={isFinalizing}
+              finalizeError={finalizeError}
+              onFinalize={() => finalizeSettlement()}
+            />
+          )}
+
+          {finalizedSettlement && (
+            <div className="light-panel p-5 rounded-xl border border-emerald-200 bg-emerald-50/70 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-3 text-xs text-emerald-900">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+                <div>
+                  <p className="font-bold text-sm">
+                    Settlement Finalized — {finalizedSettlement.settlementNumber}
+                  </p>
+                  <p className="text-emerald-700 mt-0.5">
+                    Period {finalizedSettlement.billingPeriod.startDate} to{' '}
+                    {finalizedSettlement.billingPeriod.endDate} | Net Payable:{' '}
+                    <strong>₹{finalizedSettlement.settlementSummary.netPayable}</strong>
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  selectSettlement(finalizedSettlement.settlementId);
+                  setActiveView('history');
+                }}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg transition cursor-pointer"
+              >
+                View Settlement Details
+                <ArrowRight className="w-3.5 h-3.5" />
+              </button>
+            </div>
           )}
         </>
       )}
