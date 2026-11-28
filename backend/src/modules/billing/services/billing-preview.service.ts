@@ -1,5 +1,6 @@
 import crypto from 'crypto';
 import { Decimal } from 'decimal.js';
+import prisma from '../../../db/index.js';
 import ApiError from '../../../utils/ApiError.js';
 import {
   BillingPreviewRequest,
@@ -121,7 +122,8 @@ export class BillingPreviewService {
     const fingerprintSource = {
       adminId,
       farmerId: farmer.id,
-      billingPeriod,
+      startDate: billingPeriod.startDate,
+      endDate: billingPeriod.endDate,
       milk: milkCollections.map((m) => ({
         id: m.id,
         litres: m.litres,
@@ -148,8 +150,21 @@ export class BillingPreviewService {
       .update(JSON.stringify(fingerprintSource))
       .digest('hex');
 
+    const previewId = crypto.randomUUID();
+
+    await prisma.billingPreviewRecord.create({
+      data: {
+        id: previewId,
+        adminId,
+        customerId: farmer.id,
+        startDate: billingPeriod.startDate,
+        endDate: billingPeriod.endDate,
+        fingerprint,
+      },
+    });
+
     return {
-      previewId: crypto.randomUUID(),
+      previewId,
       generatedAt: new Date().toISOString(),
       fingerprint,
       calculationSnapshot,

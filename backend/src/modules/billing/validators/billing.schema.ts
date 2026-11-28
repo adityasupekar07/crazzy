@@ -15,6 +15,18 @@ export const billingPreviewRequestSchema = z.object({
   endDate: z.string().trim().min(1, 'End date is required'),
 });
 
+export const finalizeSettlementRequestSchema = z.object({
+  previewId: z.string().trim().min(1, 'Preview ID is required'),
+  farmerId: z.string().trim().min(1, 'Farmer ID is required'),
+  startDate: z.string().trim().min(1, 'Start date is required'),
+  endDate: z.string().trim().min(1, 'End date is required'),
+  idempotencyKey: z
+    .string()
+    .trim()
+    .min(1, 'Idempotency key is required')
+    .max(200, 'Idempotency key must be at most 200 characters'),
+});
+
 export const createSettlementSchema = z.object({
   customerId: z.string().min(1, 'Customer ID is required'),
   startDate: z.string().min(1, 'Start date is required'),

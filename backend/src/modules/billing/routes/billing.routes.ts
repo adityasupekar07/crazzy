@@ -2,8 +2,9 @@ import { Router } from 'express';
 import authMiddleware from '../../../middleware/auth.middleware.js';
 import { validate } from '../../../middleware/validate.middleware.js';
 import {
-  billingPreviewSchema,
+  billingPreviewRequestSchema,
   createSettlementSchema,
+  finalizeSettlementRequestSchema,
 } from '../validators/billing.schema.js';
 import {
   getSupportedCycles,
@@ -11,6 +12,7 @@ import {
   getBillingFarmers,
   getFarmerHistory,
   previewSettlement,
+  finalizeSettlement,
   createSettlement,
   getBillingHistory,
 } from '../controllers/billing.controller.js';
@@ -25,8 +27,15 @@ router.get('/farmers/:farmerId/history', authMiddleware, getFarmerHistory);
 router.post(
   '/preview',
   authMiddleware,
-  validate({ body: billingPreviewSchema }),
+  validate({ body: billingPreviewRequestSchema }),
   previewSettlement
+);
+
+router.post(
+  '/settlements',
+  authMiddleware,
+  validate({ body: finalizeSettlementRequestSchema }),
+  finalizeSettlement
 );
 
 router.post(

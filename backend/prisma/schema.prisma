@@ -59,10 +59,14 @@ model Admin {
   foodPurchases FoodPurchase[]
   foodSales     FoodSale[]
 
-  advances        Advance[]
-  rateCharts      RateChart[]
-  milkEntryAudits MilkEntryAudit[]
-  billSettlements BillSettlement[]
+  advances            Advance[]
+  rateCharts          RateChart[]
+  milkEntryAudits     MilkEntryAudit[]
+  billSettlements     BillSettlement[]
+  billingPreviews     BillingPreviewRecord[]
+  billingIdempotency  BillingIdempotencyKey[]
+  settlementAuditLogs SettlementAuditLog[]
+  settlementLedger    SettlementLedgerEntry[]
 
   /**
    * TIMESTAMPS
@@ -114,7 +118,10 @@ model Customer {
 
   milkEntryAudits MilkEntryAudit[]
 
-  billSettlements BillSettlement[]
+  billSettlements     BillSettlement[]
+  billingPreviews     BillingPreviewRecord[]
+  settlementAuditLogs SettlementAuditLog[]
+  settlementLedger    SettlementLedgerEntry[]
 
   /**
    * TIMESTAMPS
@@ -800,6 +807,9 @@ model BillSettlement {
   feedAllocations     SettlementFeedAllocation[]
   advanceAllocations  SettlementAdvanceAllocation[]
   advanceTransactions AdvanceTransaction[]
+  idempotencyKeys     BillingIdempotencyKey[]
+  auditLogs           SettlementAuditLog[]
+  ledgerEntry         SettlementLedgerEntry?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -877,4 +887,86 @@ model SettlementAdvanceAllocation {
   @@index([settlementId])
   @@index([advanceId])
   @@map("settlement_advance_allocations")
+}
+
+/**
+ * ========================================
+ * PHASE 9: SETTLEMENT FINALIZATION SUPPORT
+ * ========================================
+ */
+
+model BillingPreviewRecord {
+  id          String   @id @default(uuid())
+  adminId     String
+  admin       Admin    @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  startDate   String
+  endDate     String
+  fingerprint String
+  createdAt   DateTime @default(now())
+
+  @@index([adminId, customerId])
+  @@map("billing_preview_records")
+}
+
+model BillingIdempotencyKey {
+  id               String          @id @default(cuid())
+  adminId          String
+  admin            Admin           @relation(fields: [adminId], references: [id], onDelete: Cascade)
+  idempotencyKey   String
+  requestHash      String
+  settlementId     String?
+  settlement       BillSettlement? @relation(fields: [settlementId], references: [id], onDelete: SetNull)
+  responseSnapshot Json?
+  createdAt        DateTime        @default(now())
+
+  @@unique([adminId, idempotencyKey])
+  @@index([settlementId])
+  @@map("billing_idempotency_keys")
+}
+
+model SettlementAuditLog {
+  id              String         @id @default(cuid())
+  settlementId    String
+  settlement      BillSettlement @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+  adminId         String
+  admin           Admin          @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  customerId      String
+  customer        Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  performedBy     String?
+  cycleStartDate  DateTime
+  cycleEndDate    DateTime
+  grossMilkAmount Decimal        @db.Decimal(14, 2)
+  feedDeducted    Decimal        @db.Decimal(14, 2)
+  advanceDeducted Decimal        @db.Decimal(14, 2)
+  netPayable      Decimal        @db.Decimal(14, 2)
+  action          String         @default("FINALIZED")
+  details         Json?
+  createdAt       DateTime       @default(now())
+
+  @@index([settlementId])
+  @@index([adminId, customerId])
+  @@map("settlement_audit_logs")
+}
+
+model SettlementLedgerEntry {
+  id                      String         @id @default(cuid())
+  settlementId            String         @unique
+  settlement              BillSettlement @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+  adminId                 String
+  admin                   Admin          @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  customerId              String
+  customer                Customer       @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  entryDate               DateTime       @default(now())
+  grossMilkAmount         Decimal        @db.Decimal(14, 2)
+  totalDeductions         Decimal        @db.Decimal(14, 2)
+  netPayableAmount        Decimal        @db.Decimal(14, 2)
+  remainingFeedBalance    Decimal        @db.Decimal(14, 2)
+  remainingAdvanceBalance Decimal        @db.Decimal(14, 2)
+  notes                   String?
+  createdAt               DateTime       @default(now())
+
+  @@index([adminId, customerId])
+  @@map("settlement_ledger_entries")
 }

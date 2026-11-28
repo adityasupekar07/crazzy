@@ -10,6 +10,7 @@ import {
   billingPreviewRequestSchema,
   farmerHistoryParamsSchema,
   farmerHistoryQuerySchema,
+  finalizeSettlementRequestSchema,
 } from '../validators/billing.schema.js';
 
 export const getBillingFarmers = asyncHandler(async (req, res) => {
@@ -53,6 +54,18 @@ export const previewSettlement = asyncHandler(async (req, res) => {
   const result = await BillingPreviewService.generateBillingPreview(req.user.id, validated);
   return res.status(200).json(
     new ApiResponse(200, 'Billing preview generated successfully', result)
+  );
+});
+
+export const finalizeSettlement = asyncHandler(async (req, res) => {
+  const validated = finalizeSettlementRequestSchema.parse(req.body);
+  const result = await SettlementService.finalizeSettlement(
+    req.user.id,
+    req.user.id,
+    validated
+  );
+  return res.status(201).json(
+    new ApiResponse(201, 'Billing settlement finalized successfully', result)
   );
 });
 
