@@ -59,9 +59,10 @@ model Admin {
   foodPurchases FoodPurchase[]
   foodSales     FoodSale[]
 
-  advances   Advance[]
-  rateCharts RateChart[]
+  advances        Advance[]
+  rateCharts      RateChart[]
   milkEntryAudits MilkEntryAudit[]
+  billSettlements BillSettlement[]
 
   /**
    * TIMESTAMPS
@@ -112,6 +113,8 @@ model Customer {
   advances Advance[]
 
   milkEntryAudits MilkEntryAudit[]
+
+  billSettlements BillSettlement[]
 
   /**
    * TIMESTAMPS
@@ -190,9 +193,13 @@ model MilkEntry {
 
   isReversed Boolean @default(false)
 
+  isSettled Boolean @default(false)
+
   correctionReason String?
 
   reversalReason String?
+
+  settlementEntry SettlementMilkEntry?
 
   /**
    * CUSTOMER RELATION
@@ -599,6 +606,8 @@ model FoodSale {
 
   isActive Boolean @default(true)
 
+  settlementAllocations SettlementFeedAllocation[]
+
   /**
    * TIMESTAMPS
    */
@@ -652,7 +661,8 @@ model Advance {
 
   customer Customer @relation(fields: [customerId], references: [id])
 
-  transactions AdvanceTransaction[]
+  transactions          AdvanceTransaction[]
+  settlementAllocations SettlementAdvanceAllocation[]
 
   /**
    * INDEXES
@@ -679,9 +689,13 @@ model AdvanceTransaction {
 
   createdAt DateTime @default(now())
 
+  settlementId String?
+  settlement   BillSettlement? @relation(fields: [settlementId], references: [id], onDelete: Restrict)
+
   advance Advance @relation(fields: [advanceId], references: [id])
 
   @@index([advanceId])
+  @@index([settlementId])
   @@map("advance_transactions")
 }
 
@@ -694,6 +708,7 @@ enum AdvanceStatus {
 enum AdvanceTransactionType {
   ISSUED
   MANUAL_REPAYMENT
+  BILL_SETTLEMENT_RECOVERY
 }
 
 /**
@@ -715,10 +730,10 @@ model MilkEntryAudit {
   milkEntryId String
 
   adminId String
-  admin   Admin     @relation(fields: [adminId], references: [id], onDelete: Restrict)
+  admin   Admin  @relation(fields: [adminId], references: [id], onDelete: Restrict)
 
   customerId String
-  customer   Customer  @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
 
   rateChartId String?
 
@@ -738,3 +753,128 @@ model MilkEntryAudit {
   @@index([createdAt])
 }
 
+/**
+ * ========================================
+ * PHASE 2: BILLING SETTLEMENT MODELS
+ * ========================================
+ */
+
+enum BillSettlementStatus {
+  FINALIZED
+  CANCELLED
+}
+
+model BillSettlement {
+  id               String @id @default(cuid())
+  settlementNumber String @unique
+
+  adminId String
+  admin   Admin  @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Restrict)
+
+  paymentPeriod  PaymentPeriod?
+  cycleStartDate DateTime
+  cycleEndDate   DateTime
+
+  totalLitres             Decimal @db.Decimal(12, 2)
+  avgFat                  Decimal @db.Decimal(5, 2)
+  avgSnf                  Decimal @db.Decimal(5, 2)
+  grossMilkAmount         Decimal @db.Decimal(14, 2)
+  previousFeedPending     Decimal @db.Decimal(14, 2)
+  feedDeductionAmount     Decimal @db.Decimal(14, 2)
+  remainingFeedBalance    Decimal @db.Decimal(14, 2)
+  previousAdvancePending  Decimal @db.Decimal(14, 2)
+  advanceDeductionAmount  Decimal @db.Decimal(14, 2)
+  remainingAdvanceBalance Decimal @db.Decimal(14, 2)
+  netPayableAmount        Decimal @db.Decimal(14, 2)
+
+  paymentMode PaymentMode          @default(CASH)
+  status      BillSettlementStatus @default(FINALIZED)
+  remarks     String?
+  settledBy   String?
+  settledAt   DateTime             @default(now())
+
+  milkEntries         SettlementMilkEntry[]
+  feedAllocations     SettlementFeedAllocation[]
+  advanceAllocations  SettlementAdvanceAllocation[]
+  advanceTransactions AdvanceTransaction[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([adminId])
+  @@index([customerId])
+  @@index([adminId, customerId, cycleStartDate, cycleEndDate])
+  @@index([adminId, settledAt])
+  @@map("bill_settlements")
+}
+
+model SettlementMilkEntry {
+  id String @id @default(cuid())
+
+  settlementId String
+  settlement   BillSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  milkEntryId String    @unique
+  milkEntry   MilkEntry @relation(fields: [milkEntryId], references: [id], onDelete: Restrict)
+
+  collectionDate DateTime
+  shift          CollectionShift
+  milkType       MilkType
+  quantity       Decimal         @db.Decimal(10, 2)
+  fat            Decimal?        @db.Decimal(5, 2)
+  snf            Decimal?        @db.Decimal(5, 2)
+  rate           Decimal         @db.Decimal(12, 4)
+  totalAmount    Decimal         @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([settlementId])
+  @@map("settlement_milk_entries")
+}
+
+model SettlementFeedAllocation {
+  id String @id @default(cuid())
+
+  settlementId String
+  settlement   BillSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  foodSaleId String
+  foodSale   FoodSale @relation(fields: [foodSaleId], references: [id], onDelete: Restrict)
+
+  originalSaleAmount     Decimal @db.Decimal(14, 2)
+  previousPendingAmount  Decimal @db.Decimal(14, 2)
+  allocatedAmount        Decimal @db.Decimal(14, 2)
+  remainingPendingAmount Decimal @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+
+  @@unique([settlementId, foodSaleId])
+  @@index([settlementId])
+  @@index([foodSaleId])
+  @@map("settlement_feed_allocations")
+}
+
+model SettlementAdvanceAllocation {
+  id String @id @default(cuid())
+
+  settlementId String
+  settlement   BillSettlement @relation(fields: [settlementId], references: [id], onDelete: Cascade)
+
+  advanceId String
+  advance   Advance @relation(fields: [advanceId], references: [id], onDelete: Restrict)
+
+  originalAdvanceAmount  Decimal @db.Decimal(14, 2)
+  previousPendingAmount  Decimal @db.Decimal(14, 2)
+  allocatedAmount        Decimal @db.Decimal(14, 2)
+  remainingPendingAmount Decimal @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+
+  @@unique([settlementId, advanceId])
+  @@index([settlementId])
+  @@index([advanceId])
+  @@map("settlement_advance_allocations")
+}

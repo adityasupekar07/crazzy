@@ -3,6 +3,7 @@ import { request } from '../../utils/api';
 import type { StoreStatus } from '../utils/asyncHelper';
 import { queryClient } from '../../lib/queryClient';
 import { QUERY_KEYS } from '../../queries/keys';
+import type { BillingFarmerItem } from '../../modules/billing/billing.types';
 
 export interface SettlementRecord {
   id: string;
@@ -42,12 +43,14 @@ export interface CreateSettlementInput {
 export interface BillingState {
   // Data
   settlements: SettlementRecord[];
+  selectedFarmer: BillingFarmerItem | null;
 
   // Status
   status: StoreStatus;
   error: string | null;
 
   // Actions
+  setSelectedFarmer: (farmer: BillingFarmerItem | null) => void;
   fetchSettlements: (customerId?: string) => Promise<void>;
   createSettlement: (payload: CreateSettlementInput) => Promise<boolean>;
   reset: () => void;
@@ -55,12 +58,15 @@ export interface BillingState {
 
 const initialBillingData = {
   settlements: [],
+  selectedFarmer: null as BillingFarmerItem | null,
   status: 'idle' as StoreStatus,
   error: null,
 };
 
 export const useBillingStore = create<BillingState>((set, get) => ({
   ...initialBillingData,
+
+  setSelectedFarmer: (farmer) => set({ selectedFarmer: farmer }),
 
   // ── FETCH SETTLEMENT HISTORY ───────────────────────────────────────────────
   fetchSettlements: async (customerId?: string) => {

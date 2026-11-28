@@ -16,6 +16,7 @@ import type { Advance } from '../store';
 import type { MilkEntry } from '../store/collection/useMilkCollectionStore';
 import { Decimal } from 'decimal.js';
 import { RateChartModule } from '../modules/rateChart/RateChartModule';
+import { BillingSettlementScreen } from '../modules/billing/screens/BillingSettlementScreen';
 import { useLiveRateCalculator } from '../modules/rateChart/hooks/useLiveRateCalculator';
 import { CollectionCorrectionModal } from './CollectionCorrectionModal';
 import { CollectionReversalModal } from './CollectionReversalModal';
@@ -305,12 +306,12 @@ export default function Dashboard() {
   // 6. BILLING (persisted via billing store)
   const [billingFarmerId, setBillingFarmerId] = useState('');
   const [billingAdvanceDeduction, setBillingAdvanceDeduction] = useState('');
-  const [billingStartDate, setBillingStartDate] = useState(() => {
+  const [billingStartDate] = useState(() => {
     const d = new Date();
     d.setDate(d.getDate() - 7);
     return d.toISOString().split('T')[0];
   });
-  const [billingEndDate, setBillingEndDate] = useState(new Date().toISOString().split('T')[0]);
+  const [billingEndDate] = useState(new Date().toISOString().split('T')[0]);
 
   // 7. SETTINGS / PROFILE FORM STATE
   const [profOwnerName, setProfOwnerName] = useState(user?.ownerName || '');
@@ -1871,26 +1872,7 @@ export default function Dashboard() {
               <span>Billing calculates payouts using live database records across your custom date range. Settlements are recorded and stored permanently on the server.</span>
             </div>
 
-            <div className="light-panel p-6 rounded-xl grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Farmer</label>
-                <SearchableSelect
-                  options={farmerOptionsForId}
-                  value={billingFarmerId}
-                  onChange={(val) => setBillingFarmerId(val)}
-                  placeholder="-- All Farmers (Optional Filter) --"
-                  clearable
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600">Start Date</label>
-                <input type="date" value={billingStartDate} onChange={(e) => setBillingStartDate(e.target.value)} className="mt-1 w-full light-input rounded-lg text-xs py-1.5 px-2.5" />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600">End Date</label>
-                <input type="date" value={billingEndDate} onChange={(e) => setBillingEndDate(e.target.value)} className="mt-1 w-full light-input rounded-lg text-xs py-1.5 px-2.5" />
-              </div>
-            </div>
+            <BillingSettlementScreen />
 
             {targetBillingFarmer && (
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
